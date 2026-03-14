@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NEU Library — Visitor Log System</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ LOGIN SCREEN ══ -->
+<div id="screen-login" class="screen active">
+  <div class="login-bg">
+    <div class="login-orb orb1"></div>
+    <div class="login-orb orb2"></div>
+    <div class="login-orb orb3"></div>
+  </div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon neu-logo"><img src="neu-logo.svg" alt="NEU Logo"/></div>
+      <div>
+        <h1 class="brand">NEU Library</h1>
+        <p class="brand-sub">Visitor Log System</p>
+      </div>
+    </div>
+
+    <div class="tab-switcher">
+      <button class="tab-btn active" data-tab="email">
+        <i class="fas fa-envelope"></i> Email
+      </button>
+      <button class="tab-btn" data-tab="rfid">
+        <i class="fas fa-id-card"></i> RFID
+      </button>
+    </div>
+
+    <!-- Email Login -->
+    <div id="tab-email" class="tab-panel active">
+      <div class="input-group">
+        <label>Institutional Email</label>
+        <div class="input-wrap">
+          <i class="fas fa-envelope"></i>
+          <input type="email" id="login-email" placeholder="yourname@neu.edu.ph" autocomplete="off"/>
+        </div>
+        <span class="hint">Use your Google-based institutional email</span>
+      </div>
+    </div>
+
+    <!-- RFID Login -->
+    <div id="tab-rfid" class="tab-panel">
+      <div class="input-group">
+        <label>RFID / ID Number</label>
+        <div class="input-wrap">
+          <i class="fas fa-id-card"></i>
+          <input type="text" id="login-rfid" placeholder="Scan or enter RFID / ID number" autocomplete="off"/>
+        </div>
+        <span class="hint">Tap your RFID card or enter your ID number</span>
+      </div>
+    </div>
+
+    <div id="login-error" class="error-msg hidden"></div>
+
+    <button class="btn-primary" id="btn-login">
+      <span>Continue</span><i class="fas fa-arrow-right"></i>
+    </button>
+
+    <div class="admin-link">
+      <button id="btn-admin-login" class="link-btn">Admin Login →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PROGRAM SCREEN ══ -->
+<div id="screen-program" class="screen">
+  <div class="purpose-bg"></div>
+  <div class="program-card">
+    <div class="purpose-header">
+      <button id="btn-back-program" class="back-btn"><i class="fas fa-arrow-left"></i></button>
+      <div>
+        <h2>Your Program</h2>
+        <p id="program-greeting">Select your current college program.</p>
+      </div>
+    </div>
+    <div class="program-grid" id="program-grid">
+      <!-- Populated by JS from CONFIG.programs -->
+    </div>
+    <button class="btn-primary" id="btn-confirm-program" disabled>
+      <span>Next</span><i class="fas fa-arrow-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PURPOSE SCREEN ══ -->
+<div id="screen-purpose" class="screen">
+  <div class="purpose-bg"></div>
+  <div class="purpose-card">
+    <div class="purpose-header">
+      <button id="btn-back-purpose" class="back-btn" title="Back to program"><i class="fas fa-arrow-left"></i></button>
+      <div>
+        <h2>Purpose of Visit</h2>
+        <p id="purpose-greeting">Hello! What brings you to the library today?</p>
+      </div>
+    </div>
+
+    <div class="purpose-grid">
+      <button class="purpose-btn" data-purpose="Reading">
+        <div class="purpose-icon"><i class="fas fa-book"></i></div>
+        <span>Reading</span>
+      </button>
+      <button class="purpose-btn" data-purpose="Researching">
+        <div class="purpose-icon"><i class="fas fa-magnifying-glass"></i></div>
+        <span>Researching</span>
+      </button>
+      <button class="purpose-btn" data-purpose="Studying">
+        <div class="purpose-icon"><i class="fas fa-graduation-cap"></i></div>
+        <span>Studying</span>
+      </button>
+      <button class="purpose-btn" data-purpose="Use of Computer">
+        <div class="purpose-icon"><i class="fas fa-computer"></i></div>
+        <span>Use of Computer</span>
+      </button>
+      <button class="purpose-btn" data-purpose="Group Study">
+        <div class="purpose-icon"><i class="fas fa-users"></i></div>
+        <span>Group Study</span>
+      </button>
+      <button class="purpose-btn" data-purpose="Other">
+        <div class="purpose-icon"><i class="fas fa-ellipsis"></i></div>
+        <span>Other</span>
+      </button>
+    </div>
+
+    <button class="btn-primary" id="btn-confirm-purpose" disabled>
+      <span>Log My Visit</span><i class="fas fa-check"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ WELCOME SCREEN ══ -->
+<div id="screen-welcome" class="screen">
+  <div class="welcome-bg">
+    <div class="welcome-ripple r1"></div>
+    <div class="welcome-ripple r2"></div>
+    <div class="welcome-ripple r3"></div>
+  </div>
+  <div class="welcome-content">
+    <div class="welcome-logo"><img src="neu-logo.svg" alt="NEU Logo"/></div>
+    <div class="welcome-check"><i class="fas fa-check"></i></div>
+    <h1 class="welcome-title">Welcome to NEU Library!</h1>
+    <p class="welcome-name" id="welcome-name">Good to see you!</p>
+    <p class="welcome-purpose" id="welcome-purpose"></p>
+    <p class="welcome-time" id="welcome-time"></p>
+    <div class="welcome-meta" id="welcome-meta"></div>
+    <button class="btn-outline" id="btn-welcome-done">Done</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ ADMIN LOGIN SCREEN ══ -->
+<div id="screen-admin-login" class="screen">
+  <div class="login-bg">
+    <div class="login-orb orb1"></div>
+    <div class="login-orb orb2"></div>
+    <div class="login-orb orb3"></div>
+  </div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon fallback-red"><i class="fas fa-shield-halved"></i></div>
+      <div>
+        <h1 class="brand">Admin Access</h1>
+        <p class="brand-sub">Library Management</p>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Admin Email</label>
+      <div class="input-wrap">
+        <i class="fas fa-user-shield"></i>
+        <input type="email" id="admin-email" placeholder="admin@neu.edu.ph"/>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Password</label>
+      <div class="input-wrap">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="admin-password" placeholder="Enter password"/>
+        <button class="toggle-pw" id="toggle-pw"><i class="fas fa-eye"></i></button>
+      </div>
+    </div>
+    <div id="admin-login-error" class="error-msg hidden"></div>
+    <button class="btn-primary" id="btn-admin-submit">
+      <span>Sign In</span><i class="fas fa-arrow-right"></i>
+    </button>
+    <div class="admin-link">
+      <button id="btn-back-to-visitor" class="link-btn">← Back to Visitor Login</button>
+    </div>
+    <div class="demo-hint">
+      <i class="fas fa-circle-info"></i>
+      Demo credentials: admin@neu.edu.ph / admin123
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ ADMIN DASHBOARD ══ -->
+<div id="screen-dashboard" class="screen">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-icon sm neu-logo"><img src="neu-logo.svg" alt="NEU"/></div>
+      <div class="sidebar-brand-text">
+        <strong>NEU Library</strong>
+        <span>Visitor Log System</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="overview">
+        <i class="fas fa-chart-pie"></i><span>Overview</span>
+      </a>
+      <a href="#" class="nav-item" data-view="visitors">
+        <i class="fas fa-users"></i><span>Visitors</span>
+      </a>
+      <a href="#" class="nav-item" data-view="users">
+        <i class="fas fa-user-gear"></i><span>User Management</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button id="btn-admin-logout" class="logout-btn">
+        <i class="fas fa-right-from-bracket"></i><span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    <header class="dash-header">
+      <div class="dash-title" id="dash-view-title">Overview</div>
+      <div class="dash-search-wrap">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" id="dash-search" placeholder="Search by name, email, college, purpose…"/>
+        <input type="date" id="dash-date-filter" title="Filter by date"/>
+        <button id="btn-clear-filter" class="clear-btn" title="Clear filters"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="admin-badge">
+        <i class="fas fa-user-shield"></i>
+        <span id="admin-name-badge">Admin</span>
+      </div>
+    </header>
+
+    <!-- ── Overview View ── -->
+    <section id="view-overview" class="dash-view active">
+      <div class="stats-grid">
+        <div class="stat-card accent-red">
+          <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+          <div class="stat-body">
+            <span class="stat-label">Today</span>
+            <span class="stat-num" id="stat-today">0</span>
+          </div>
+        </div>
+        <div class="stat-card accent-green">
+          <div class="stat-icon"><i class="fas fa-calendar-week"></i></div>
+          <div class="stat-body">
+            <span class="stat-label">This Week</span>
+            <span class="stat-num" id="stat-week">0</span>
+          </div>
+        </div>
+        <div class="stat-card accent-crimson">
+          <div class="stat-icon"><i class="fas fa-calendar"></i></div>
+          <div class="stat-body">
+            <span class="stat-label">This Month</span>
+            <span class="stat-num" id="stat-month">0</span>
+          </div>
+        </div>
+        <div class="stat-card accent-forest">
+          <div class="stat-icon"><i class="fas fa-users"></i></div>
+          <div class="stat-body">
+            <span class="stat-label">Total Visits</span>
+            <span class="stat-num" id="stat-total">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- College Breakdown -->
+      <div class="section-header">
+        <h3>Visits by College</h3>
+        <span class="badge" id="college-period-label">All Time</span>
+      </div>
+      <div class="college-cards" id="college-cards"></div>
+
+      <!-- Purpose Breakdown -->
+      <div class="section-header">
+        <h3>Visit Purposes</h3>
+      </div>
+      <div class="purpose-bars" id="purpose-bars"></div>
+
+      <!-- Recent Visits Table -->
+      <div class="section-header">
+        <h3>Recent Visits</h3>
+      </div>
+      <div class="table-wrap">
+        <table class="visit-table" id="recent-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email / RFID</th><th>College</th><th>Purpose</th><th>Program</th><th>Time In</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recent-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Visitors View ── -->
+    <section id="view-visitors" class="dash-view">
+      <div class="table-wrap">
+        <table class="visit-table" id="visitors-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email / RFID</th><th>College</th><th>Purpose</th><th>Program</th><th>Date &amp; Time</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="visitors-tbody"></tbody>
+        </table>
+        <div id="visitors-empty" class="empty-state hidden">
+          <i class="fas fa-magnifying-glass"></i>
+          <p>No visitors found</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── User Management View ── -->
+    <section id="view-users" class="dash-view">
+      <div class="table-wrap">
+        <table class="visit-table" id="users-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email / RFID</th><th>College</th><th>Total Visits</th><th>Last Visit</th><th>Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+        <div id="users-empty" class="empty-state hidden">
+          <i class="fas fa-users"></i>
+          <p>No users found</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════ MODALS ══ -->
+
+<!-- Block User Confirm -->
+<div id="modal-block" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-icon warn"><i class="fas fa-ban"></i></div>
+    <h3 id="modal-block-title">Block User?</h3>
+    <p id="modal-block-body">Are you sure you want to block this user? They will not be able to log visits.</p>
+    <div class="modal-actions">
+      <button class="btn-outline" id="modal-cancel">Cancel</button>
+      <button class="btn-danger" id="modal-confirm-block">Block User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unblock User Confirm -->
+<div id="modal-unblock" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-icon success"><i class="fas fa-circle-check"></i></div>
+    <h3>Unblock User?</h3>
+    <p>This will restore access for this user.</p>
+    <div class="modal-actions">
+      <button class="btn-outline" id="modal-unblock-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-confirm-unblock">Unblock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Blocked Notification -->
+<div id="modal-blocked" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-icon danger"><i class="fas fa-ban"></i></div>
+    <h3>Access Denied</h3>
+    <p>Your account has been blocked by the administrator. Please contact library staff.</p>
+    <div class="modal-actions">
+      <button class="btn-primary" id="modal-blocked-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body>
+</html>
