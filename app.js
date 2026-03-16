@@ -11,9 +11,9 @@
 const CONFIG = {
   supabaseUrl: 'https://ydozugjlltfzcukykwec.supabase.co',
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlkb3p1Z2psbHRmemN1a3lrd2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzE1MDcsImV4cCI6MjA4ODEwNzUwN30.-24nkr7dy8evVEdXnX6aWkNT7ozK1GdCALfCUXl5WYQ',
-  adminCredentials: { email: 'admin@neu.edu.ph', password: 'admin123' },
+  adminCredentials: { email: 'jcesperanza@neu.edu.ph', password: 'admin123' },
   validDomains: ['neu.edu.ph', 'gmail.com'],
-  colleges: ['CAS', 'CBA', 'CCJE', 'CEA', 'CED', 'CHST', 'CITE', 'CICS', 'CN', 'COT'],
+  colleges: ['CAS', 'CBA', 'CCJE', 'CEA', 'CED', 'CHST', 'CITE', 'CLA', 'CN', 'COT'],
   programs: [
     'BSCS', 'BSMATH', 'BSPSYCH', 'ABCOMM',
     'BSBA', 'BSACCT', 'BSHRM', 'BSTM',
@@ -87,10 +87,10 @@ const DB = {
     return updated;
   },
 
-  async logVisit(userId, purpose, program) {
+  async logVisit(userId, purpose, program, role) {
     const { data, error } = await _sb
       .from('library_visits')
-.insert([{ user_id: userId, purpose, program: program || null }])
+.insert([{ user_id: userId, purpose, program: program || null, role: role || null }])
       .select()
       .single();
     if (error) { console.error('logVisit:', error); return null; }
@@ -104,6 +104,7 @@ const DB = {
         id,
         purpose,
         program,
+        role,
         logged_at,
         user_id,
         library_users (
@@ -126,6 +127,7 @@ const DB = {
       id: v.id,
       purpose: v.purpose,
       program: v.program || null,
+      role: v.role || null,
       timestamp: v.logged_at,
       userId: v.user_id,
       user: v.library_users || null,
@@ -248,6 +250,7 @@ let state = {
   currentScreen: 'login',
   activeTab: 'email',
   currentUser: null,
+  selectedRole: null,
   selectedPurpose: null,
   selectedProgram: null,
   adminLoggedIn: false,
@@ -332,10 +335,9 @@ async function handleLogin() {
   }
 
   state.currentUser = user;
-  document.getElementById('program-greeting').textContent =
-    `Hello, ${user.name.split(' ')[0]}! Select your current program.`;
-  buildProgramGrid();
-  showScreen('program');
+  document.getElementById('role-greeting').textContent =
+    `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
+  showScreen('role');
 }
 
 async function handlePurposeConfirm() {
@@ -345,19 +347,45 @@ async function handlePurposeConfirm() {
   btn.disabled = true;
   btn.querySelector('span').textContent = 'Logging…';
 
-  await DB.logVisit(state.currentUser.id, state.selectedPurpose, state.selectedProgram);
+  await DB.logVisit(state.currentUser.id, state.selectedPurpose, state.selectedProgram, state.selectedRole);
 
   document.getElementById('welcome-name').textContent = state.currentUser.name;
   document.getElementById('welcome-purpose').textContent = `Purpose: ${state.selectedPurpose}`;
   const now = new Date();
   document.getElementById('welcome-time').textContent = `${formatDate(now)} at ${formatTime(now)}`;
   document.getElementById('welcome-meta').textContent =
-    `${state.selectedProgram ? state.selectedProgram + ' · ' : ''}${state.currentUser.college} · ${state.currentUser.email || state.currentUser.rfid}`;
+    `${state.selectedRole || ''} ${state.selectedProgram ? '· ' + state.selectedProgram : ''} · ${state.currentUser.college} · ${state.currentUser.email || state.currentUser.rfid}`;  
 
   showScreen('welcome');
 
   clearTimeout(state.welcomeTimer);
   state.welcomeTimer = setTimeout(resetToLogin, CONFIG.welcomeTimeout);
+}
+
+// ══════════════════════════════════════════════════
+// ── ROLE SCREEN ──────────────────────────────────
+// ══════════════════════════════════════════════════
+
+function handleRoleSelect(role) {
+  state.selectedRole = role;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.role-btn[data-role="${role}"]`)?.classList.add('selected');
+
+  // Small delay for visual feedback, then advance
+  setTimeout(() => {
+    if (role === 'Student') {
+      // Students pick program next
+      document.getElementById('program-greeting').textContent =
+        `Select your current college program.`;
+      buildProgramGrid();
+      showScreen('program');
+    } else {
+      // Employees skip program and go straight to purpose
+      document.getElementById('purpose-greeting').textContent =
+        `What brings you to the library today?`;
+      showScreen('purpose');
+    }
+  }, 200);
 }
 
 // ══════════════════════════════════════════════════
@@ -393,11 +421,13 @@ function handleProgramConfirm() {
 function resetToLogin() {
   clearTimeout(state.welcomeTimer);
   state.currentUser = null;
+  state.selectedRole = null;
   state.selectedPurpose = null;
   state.selectedProgram = null;
   document.getElementById('login-email').value = '';
   document.getElementById('login-rfid').value = '';
   document.getElementById('login-error').classList.add('hidden');
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.purpose-btn').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.program-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('btn-confirm-program').disabled = true;
@@ -440,8 +470,9 @@ function handleAdminLogout() {
 function renderView(view) {
   const query = document.getElementById('dash-search').value.trim().toLowerCase();
   const dateFilter = document.getElementById('dash-date-filter').value;
+  const roleFilter = document.getElementById('dash-role-filter')?.value || '';
   if (view === 'overview') renderOverview();
-  if (view === 'visitors') renderVisitors(query, dateFilter);
+  if (view === 'visitors') renderVisitors(query, dateFilter, roleFilter);
   if (view === 'users') renderUsers(query);
 }
 
@@ -505,8 +536,11 @@ async function renderOverview() {
   all.slice(0, 10).forEach(v => tbody.insertAdjacentHTML('beforeend', visitRow(v)));
 }
 
-async function renderVisitors(query, dateFilter) {
-  const all = await DB.getVisitsWithUsers({ search: query, date: dateFilter });
+async function renderVisitors(query, dateFilter, roleFilter = '') {
+  let all = await DB.getVisitsWithUsers({ search: query, date: dateFilter });
+  if (roleFilter) {
+    all = all.filter(v => v.role?.toLowerCase() === roleFilter.toLowerCase());
+  }
   const tbody = document.getElementById('visitors-tbody');
   const empty = document.getElementById('visitors-empty');
   tbody.innerHTML = '';
@@ -553,6 +587,7 @@ function visitRow(v) {
       <td>${esc(u?.name || '—')}</td>
       <td style="color:var(--text-muted);font-size:12px">${esc(u?.email || u?.rfid || '—')}</td>
       <td>${esc(u?.college || '—')}</td>
+      <td>${v.role ? `<span class="role-pill ${v.role.toLowerCase()}">${esc(v.role)}</span>` : '—'}</td>
       <td>${esc(v.purpose)}</td>
       <td style="color:var(--text-muted);font-size:12px">${esc(v.program || '—')}</td>
       <td style="color:var(--text-muted);font-size:12px">${formatDate(d)} ${formatTime(d)}</td>
@@ -633,10 +668,22 @@ document.getElementById('btn-login').addEventListener('click', handleLogin);
 document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('login-rfid').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 
+// Role
+document.querySelectorAll('.role-btn').forEach(btn => {
+  btn.addEventListener('click', () => handleRoleSelect(btn.dataset.role));
+});
+document.getElementById('btn-back-role').addEventListener('click', () => {
+  state.selectedRole = null;
+  state.currentUser = null;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  showScreen('login');
+});
+
 // Purpose
 document.querySelectorAll('.purpose-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.purpose-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.purpose-btn').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.program-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('btn-confirm-program').disabled = true;
     btn.classList.add('selected');
@@ -649,17 +696,21 @@ document.getElementById('btn-back-purpose').addEventListener('click', () => {
   state.selectedPurpose = null;
   document.querySelectorAll('.purpose-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('btn-confirm-purpose').disabled = true;
-  showScreen('program');
+  // Employees go back to role, Students go back to program
+  if (state.selectedRole === 'Employee') {
+    showScreen('role');
+  } else {
+    showScreen('program');
+  }
 });
 
 // Program screen
 document.getElementById('btn-confirm-program').addEventListener('click', handleProgramConfirm);
 document.getElementById('btn-back-program').addEventListener('click', () => {
   state.selectedProgram = null;
-  state.currentUser = null;
   document.querySelectorAll('.program-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('btn-confirm-program').disabled = true;
-  showScreen('login');
+  showScreen('role');
 });
 
 // Welcome
@@ -700,9 +751,11 @@ document.getElementById('dash-search').addEventListener('input', () => {
   searchTimer = setTimeout(() => renderView(state.currentView), 300);
 });
 document.getElementById('dash-date-filter').addEventListener('change', () => renderView(state.currentView));
+document.getElementById('dash-role-filter').addEventListener('change', () => renderView(state.currentView));
 document.getElementById('btn-clear-filter').addEventListener('click', () => {
   document.getElementById('dash-search').value = '';
   document.getElementById('dash-date-filter').value = '';
+  document.getElementById('dash-role-filter').value = '';
   renderView(state.currentView);
 });
 
