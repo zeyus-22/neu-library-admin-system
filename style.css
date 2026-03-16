@@ -651,3 +651,18 @@ html, body {
 }
 .role-pill.student  { background: rgba(79,142,247,0.12); color: #7ab4ff; border: 1px solid rgba(79,142,247,0.25); }
 .role-pill.employee { background: rgba(244,162,97,0.12); color: #f4a261; border: 1px solid rgba(244,162,97,0.25); }
+
+/* ── Nav badge (blocked count) ── */
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px; height: 18px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
