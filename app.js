@@ -164,6 +164,16 @@ const DB = {
     );
   },
 
+  async getBlockedUsers() {
+    const { data, error } = await _sb
+      .from('library_users')
+      .select('*')
+      .eq('blocked', true)
+      .order('created_at', { ascending: false });
+    if (error) { console.error('getBlockedUsers:', error); return []; }
+    return data || [];
+  },
+
   async getVisitCountsPerUser() {
     const { data, error } = await _sb
       .from('library_visits')
@@ -278,7 +288,7 @@ function showDashView(view) {
     n.classList.toggle('active', n.dataset.view === view)
   );
   document.getElementById('dash-view-title').textContent =
-    { overview: 'Overview', visitors: 'Visitor Log', users: 'User Management' }[view] || view;
+    { overview: 'Overview', visitors: 'Visitor Log', users: 'User Management', blocked: 'Blocked Users' }[view] || view;
   state.currentView = view;
   renderView(view);
 }
@@ -474,6 +484,7 @@ function renderView(view) {
   if (view === 'overview') renderOverview();
   if (view === 'visitors') renderVisitors(query, dateFilter, roleFilter);
   if (view === 'users') renderUsers(query);
+  if (view === 'blocked') renderBlocked(query);
 }
 
 async function renderOverview() {
@@ -483,6 +494,14 @@ async function renderOverview() {
   const today = all.filter(v => sameDay(new Date(v.timestamp), now));
   const thisWeek = all.filter(v => sameWeek(new Date(v.timestamp), now));
   const thisMonth = all.filter(v => sameMonth(new Date(v.timestamp), now));
+
+  // Update blocked count badge in nav
+  const blockedUsers = await DB.getBlockedUsers();
+  const blockedBadgeEl = document.getElementById('blocked-nav-count');
+  if (blockedBadgeEl) {
+    blockedBadgeEl.textContent = blockedUsers.length;
+    blockedBadgeEl.style.display = blockedUsers.length > 0 ? 'inline-flex' : 'none';
+  }
 
   document.getElementById('stat-today').textContent = today.length;
   document.getElementById('stat-week').textContent = thisWeek.length;
@@ -575,6 +594,37 @@ async function renderUsers(query) {
             ? `<button class="action-btn unblock" data-id="${u.id}">Unblock</button>`
             : `<button class="action-btn block" data-id="${u.id}">Block</button>`}
         </td>
+      </tr>`);
+  });
+}
+
+async function renderBlocked(query) {
+  let users = await DB.getBlockedUsers();
+  if (query) {
+    const s = query.toLowerCase();
+    users = users.filter(u =>
+      u.name?.toLowerCase().includes(s) ||
+      u.email?.toLowerCase().includes(s) ||
+      u.rfid?.toLowerCase().includes(s) ||
+      u.college?.toLowerCase().includes(s)
+    );
+  }
+  const { counts: visitCount } = await DB.getVisitCountsPerUser();
+  const tbody = document.getElementById('blocked-tbody');
+  const empty = document.getElementById('blocked-empty');
+  tbody.innerHTML = '';
+  if (!users.length) { empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  users.forEach(u => {
+    const count = visitCount[u.id] || 0;
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${esc(u.name)}</td>
+        <td style="color:var(--text-muted);font-size:12px">${esc(u.email || u.rfid || '—')}</td>
+        <td>${esc(u.college)}</td>
+        <td style="font-family:var(--font-head);font-weight:700">${count}</td>
+        <td><span class="status-pill blocked">Blocked</span></td>
+        <td><button class="action-btn unblock" data-id="${u.id}">Unblock</button></td>
       </tr>`);
   });
 }
