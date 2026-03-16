@@ -4,6 +4,11 @@ A web-based Library Monitoring System for New Era University, built with HTML, C
 
 ---
 
+## 🚀 Deploy the Website
+https://neu-library-admin-system.vercel.app/
+
+---
+
 ## 🚀 Features
 
 ### Visitor Kiosk
