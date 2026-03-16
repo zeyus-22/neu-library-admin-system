@@ -247,6 +247,10 @@
       <a href="#" class="nav-item" data-view="users">
         <i class="fas fa-user-gear"></i><span>User Management</span>
       </a>
+      <a href="#" class="nav-item" data-view="blocked">
+        <i class="fas fa-ban"></i><span>Blocked Users</span>
+        <span id="blocked-nav-count" class="nav-badge" style="display:none">0</span>
+      </a>
     </nav>
     <div class="sidebar-footer">
       <button id="btn-admin-logout" class="logout-btn">
@@ -347,6 +351,24 @@
         <div id="visitors-empty" class="empty-state hidden">
           <i class="fas fa-magnifying-glass"></i>
           <p>No visitors found</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Blocked Users View ── -->
+    <section id="view-blocked" class="dash-view">
+      <div class="table-wrap">
+        <table class="visit-table" id="blocked-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email / RFID</th><th>College</th><th>Total Visits</th><th>Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="blocked-tbody"></tbody>
+        </table>
+        <div id="blocked-empty" class="empty-state hidden">
+          <i class="fas fa-ban"></i>
+          <p>No blocked users</p>
         </div>
       </div>
     </section>
