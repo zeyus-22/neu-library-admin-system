@@ -71,6 +71,33 @@
   </div>
 </div>
 
+
+<!-- ═══════════════════════════════════════════ ROLE SCREEN ══ -->
+<div id="screen-role" class="screen">
+  <div class="purpose-bg"></div>
+  <div class="role-card">
+    <div class="purpose-header">
+      <button id="btn-back-role" class="back-btn"><i class="fas fa-arrow-left"></i></button>
+      <div>
+        <h2>Who are you?</h2>
+        <p id="role-greeting">Please select your role to continue.</p>
+      </div>
+    </div>
+    <div class="role-grid">
+      <button class="role-btn" data-role="Student">
+        <div class="role-icon"><i class="fas fa-user-graduate"></i></div>
+        <span class="role-label">Student</span>
+        <span class="role-sub">Currently enrolled</span>
+      </button>
+      <button class="role-btn" data-role="Employee">
+        <div class="role-icon"><i class="fas fa-user-tie"></i></div>
+        <span class="role-label">Employee</span>
+        <span class="role-sub">Faculty / Staff</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════ PROGRAM SCREEN ══ -->
 <div id="screen-program" class="screen">
   <div class="purpose-bg"></div>
@@ -194,7 +221,7 @@
     </div>
     <div class="demo-hint">
       <i class="fas fa-circle-info"></i>
-      Demo credentials: admin@neu.edu.ph / admin123
+      Demo credentials: jcesperanza@neu.edu.ph / admin123
     </div>
   </div>
 </div>
@@ -236,7 +263,7 @@
         <i class="fas fa-magnifying-glass"></i>
         <input type="text" id="dash-search" placeholder="Search by name, email, college, purpose…"/>
         <input type="date" id="dash-date-filter" title="Filter by date"/>
-        <button id="btn-clear-filter" class="clear-btn" title="Clear filters"><i class="fas fa-xmark"></i></button>
+        <select id="dash-role-filter" class="role-filter-select"><option value="">All Roles</option><option value="Student">Student</option><option value="Employee">Employee</option></select><button id="btn-clear-filter" class="clear-btn" title="Clear filters"><i class="fas fa-xmark"></i></button>
       </div>
       <div class="admin-badge">
         <i class="fas fa-user-shield"></i>
@@ -298,7 +325,7 @@
         <table class="visit-table" id="recent-table">
           <thead>
             <tr>
-              <th>Name</th><th>Email / RFID</th><th>College</th><th>Purpose</th><th>Program</th><th>Time In</th><th>Status</th>
+              <th>Name</th><th>Email / RFID</th><th>College</th><th>Role</th><th>Purpose</th><th>Program</th><th>Time In</th><th>Status</th>
             </tr>
           </thead>
           <tbody id="recent-tbody"></tbody>
@@ -312,7 +339,7 @@
         <table class="visit-table" id="visitors-table">
           <thead>
             <tr>
-              <th>Name</th><th>Email / RFID</th><th>College</th><th>Purpose</th><th>Program</th><th>Date &amp; Time</th><th>Status</th>
+              <th>Name</th><th>Email / RFID</th><th>College</th><th>Role</th><th>Purpose</th><th>Program</th><th>Date &amp; Time</th><th>Status</th>
             </tr>
           </thead>
           <tbody id="visitors-tbody"></tbody>
