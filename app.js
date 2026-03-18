@@ -537,11 +537,13 @@ async function renderOverview() {
           borderWidth: 1,
           borderRadius: 6,
           borderSkipped: false,
+          maxBarThickness: 52,
+          minBarLength: 4,
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {
