@@ -221,7 +221,7 @@
     </div>
     <div class="demo-hint">
       <i class="fas fa-circle-info"></i>
-      Demo credentials: jcesperanza@neu.edu.ph / admin123
+      Demo credentials: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c0aaa3a5b3b0a5b2a1aebaa180aea5b5eea5a4b5eeb0a8">[email&#160;protected]</a> / admin123
     </div>
   </div>
 </div>
@@ -266,8 +266,7 @@
       <div class="dash-search-wrap">
         <i class="fas fa-magnifying-glass"></i>
         <input type="text" id="dash-search" placeholder="Search by name, email, college, purpose…"/>
-        <input type="date" id="dash-date-filter" title="Filter by date"/>
-        <select id="dash-role-filter" class="role-filter-select"><option value="">All Roles</option><option value="Student">Student</option><option value="Employee">Employee</option></select><button id="btn-clear-filter" class="clear-btn" title="Clear filters"><i class="fas fa-xmark"></i></button>
+        <button id="btn-clear-filter" class="clear-btn" title="Clear filters"><i class="fas fa-xmark"></i></button>
       </div>
       <div class="admin-badge">
         <i class="fas fa-user-shield"></i>
@@ -313,7 +312,9 @@
         <h3>Visits by College</h3>
         <span class="badge" id="college-period-label">All Time</span>
       </div>
-      <div class="college-cards" id="college-cards"></div>
+      <div class="chart-wrap">
+        <canvas id="college-chart"></canvas>
+      </div>
 
       <!-- Purpose Breakdown -->
       <div class="section-header">
@@ -339,6 +340,28 @@
 
     <!-- ── Visitors View ── -->
     <section id="view-visitors" class="dash-view">
+      <!-- Visitors filter bar -->
+      <div class="visitors-filter-bar">
+        <div class="date-range-group">
+          <label>From</label>
+          <input type="date" id="date-from" class="date-input"/>
+        </div>
+        <div class="date-range-group">
+          <label>To</label>
+          <input type="date" id="date-to" class="date-input"/>
+        </div>
+        <select id="dash-role-filter" class="role-filter-select-inline">
+          <option value="">All Roles</option>
+          <option value="Student">Student</option>
+          <option value="Employee">Employee</option>
+        </select>
+        <button id="btn-apply-filter" class="btn-filter-apply">
+          <i class="fas fa-filter"></i> Apply
+        </button>
+        <button id="btn-reset-filter" class="btn-filter-reset">
+          <i class="fas fa-xmark"></i> Reset
+        </button>
+      </div>
       <div class="table-wrap">
         <table class="visit-table" id="visitors-table">
           <thead>
@@ -436,6 +459,7 @@
 <!-- Toast -->
 <div id="toast" class="toast hidden"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>
