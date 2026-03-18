@@ -4,6 +4,8 @@
 
 'use strict';
 
+let collegeChart = null; // Chart.js instance
+
 // ══════════════════════════════════════════════════
 // ── CONFIG ───────────────────────────────────────
 // ══════════════════════════════════════════════════
@@ -113,11 +115,7 @@ const DB = {
       `)
       .order('logged_at', { ascending: false });
 
-    if (filters.date) {
-      query = query
-        .gte('logged_at', `${filters.date}T00:00:00`)
-        .lte('logged_at', `${filters.date}T23:59:59`);
-    }
+    // Date range filtering is handled client-side for flexibility
 
     const { data, error } = await query;
     if (error) { console.error('getVisitsWithUsers:', error); return []; }
@@ -478,13 +476,14 @@ function handleAdminLogout() {
 // ══════════════════════════════════════════════════
 
 function renderView(view) {
-  const query = document.getElementById('dash-search').value.trim().toLowerCase();
-  const dateFilter = document.getElementById('dash-date-filter').value;
+  const query    = document.getElementById('dash-search').value.trim().toLowerCase();
+  const dateFrom = document.getElementById('date-from')?.value || '';
+  const dateTo   = document.getElementById('date-to')?.value   || '';
   const roleFilter = document.getElementById('dash-role-filter')?.value || '';
   if (view === 'overview') renderOverview();
-  if (view === 'visitors') renderVisitors(query, dateFilter, roleFilter);
-  if (view === 'users') renderUsers(query);
-  if (view === 'blocked') renderBlocked(query);
+  if (view === 'visitors') renderVisitors(query, dateFrom, dateTo, roleFilter);
+  if (view === 'users')    renderUsers(query);
+  if (view === 'blocked')  renderBlocked(query);
 }
 
 async function renderOverview() {
@@ -508,23 +507,73 @@ async function renderOverview() {
   document.getElementById('stat-month').textContent = thisMonth.length;
   document.getElementById('stat-total').textContent = all.length;
 
-  // College breakdown
+  // College breakdown — column chart
   const collegeCounts = {};
   CONFIG.colleges.forEach(c => collegeCounts[c] = 0);
   all.forEach(v => {
     if (v.user?.college) collegeCounts[v.user.college] = (collegeCounts[v.user.college] || 0) + 1;
   });
-  const ccEl = document.getElementById('college-cards');
-  ccEl.innerHTML = '';
-  const nonZero = Object.entries(collegeCounts).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]);
-  nonZero.forEach(([name, count]) => {
-    ccEl.insertAdjacentHTML('beforeend', `
-      <div class="college-card">
-        <div class="college-name">${name}</div>
-        <div class="college-count">${count}</div>
-      </div>`);
-  });
-  if (!nonZero.length) ccEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No data yet.</p>';
+  const sorted = Object.entries(collegeCounts).sort((a, b) => b[1] - a[1]);
+  const chartLabels = sorted.map(([k]) => k);
+  const chartData   = sorted.map(([, v]) => v);
+
+  const canvas = document.getElementById('college-chart');
+  if (canvas) {
+    if (collegeChart) collegeChart.destroy();
+    const ctx = canvas.getContext('2d');
+    collegeChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Visits',
+          data: chartData,
+          backgroundColor: chartData.map((_, i) =>
+            i % 2 === 0 ? 'rgba(192,0,26,0.75)' : 'rgba(0,100,0,0.75)'
+          ),
+          borderColor: chartData.map((_, i) =>
+            i % 2 === 0 ? 'rgba(232,0,31,1)' : 'rgba(0,160,0,1)'
+          ),
+          borderWidth: 1,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1414',
+            borderColor: 'rgba(192,0,26,0.4)',
+            borderWidth: 1,
+            titleColor: '#f0eded',
+            bodyColor: '#8a7e7e',
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.y} visit${ctx.parsed.y !== 1 ? 's' : ''}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8a7e7e', font: { family: 'DM Sans', size: 11 } },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: {
+              color: '#8a7e7e',
+              font: { family: 'DM Sans', size: 11 },
+              stepSize: 1,
+              precision: 0,
+            }
+          }
+        }
+      }
+    });
+  }
 
   // Purpose bars
   const purposeCounts = {};
@@ -555,8 +604,15 @@ async function renderOverview() {
   all.slice(0, 10).forEach(v => tbody.insertAdjacentHTML('beforeend', visitRow(v)));
 }
 
-async function renderVisitors(query, dateFilter, roleFilter = '') {
-  let all = await DB.getVisitsWithUsers({ search: query, date: dateFilter });
+async function renderVisitors(query, dateFrom = '', dateTo = '', roleFilter = '') {
+  let all = await DB.getVisitsWithUsers({ search: query });
+  // Date range filter
+  if (dateFrom) {
+    all = all.filter(v => v.timestamp >= dateFrom + 'T00:00:00');
+  }
+  if (dateTo) {
+    all = all.filter(v => v.timestamp <= dateTo + 'T23:59:59');
+  }
   if (roleFilter) {
     all = all.filter(v => v.role?.toLowerCase() === roleFilter.toLowerCase());
   }
@@ -800,14 +856,22 @@ document.getElementById('dash-search').addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => renderView(state.currentView), 300);
 });
-document.getElementById('dash-date-filter').addEventListener('change', () => renderView(state.currentView));
-document.getElementById('dash-role-filter').addEventListener('change', () => renderView(state.currentView));
+
 document.getElementById('btn-clear-filter').addEventListener('click', () => {
   document.getElementById('dash-search').value = '';
-  document.getElementById('dash-date-filter').value = '';
-  document.getElementById('dash-role-filter').value = '';
   renderView(state.currentView);
 });
+
+// Visitors date range + role filters
+document.getElementById('btn-apply-filter')?.addEventListener('click', () => renderView('visitors'));
+document.getElementById('btn-reset-filter')?.addEventListener('click', () => {
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value   = '';
+  document.getElementById('dash-role-filter').value = '';
+  document.getElementById('dash-search').value = '';
+  renderView('visitors');
+});
+document.getElementById('dash-role-filter')?.addEventListener('change', () => renderView('visitors'));
 
 // ══════════════════════════════════════════════════
 // ── INIT ─────────────────────────────────────────
