@@ -666,3 +666,94 @@ html, body {
   justify-content: center;
   padding: 0 5px;
 }
+
+/* ══════════════════════════════════════════════════
+   VISITORS FILTER BAR
+══════════════════════════════════════════════════ */
+.visitors-filter-bar {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.date-range-group {
+  display: flex; align-items: center; gap: 7px;
+}
+.date-range-group label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.5px; white-space: nowrap;
+}
+.date-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-family: var(--font-body);
+  font-size: 13px; padding: 7px 10px;
+  outline: none; cursor: pointer;
+  transition: border-color 0.2s;
+}
+.date-input:focus { border-color: var(--red); }
+.date-input::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
+
+.role-filter-select-inline {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted); font-family: var(--font-body);
+  font-size: 13px; padding: 7px 10px;
+  outline: none; cursor: pointer;
+  transition: border-color 0.2s;
+}
+.role-filter-select-inline:focus { border-color: var(--red); }
+.role-filter-select-inline option { background: var(--surface2); color: var(--text); }
+
+.btn-filter-apply {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: var(--red);
+  border: none; border-radius: var(--radius-sm);
+  color: #fff; font-family: var(--font-body);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.btn-filter-apply:hover { opacity: 0.85; }
+
+.btn-filter-reset {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted); font-family: var(--font-body);
+  font-size: 13px; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.btn-filter-reset:hover { border-color: var(--red); color: #ff6070; }
+
+/* Divider between date groups */
+.date-range-divider {
+  color: var(--text-dim); font-size: 13px;
+}
+
+/* ══════════════════════════════════════════════════
+   COLLEGE CHART
+══════════════════════════════════════════════════ */
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 20px 16px;
+  margin-bottom: 28px;
+  position: relative;
+  height: 260px;
+}
+.chart-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
