@@ -5,19 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NEU Library — Visitor Log System</title>
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <meta name="google-signin-client_id" content="988706213326-0r902t1jsp5e6noo890dkimajq2hg25q.apps.googleusercontent.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 </head>
 <body>
 
+<!-- ═══════════════════════════════════════════ LANDING PAGE ══ -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-bg">
+    <div class="landing-img-bg"></div>
+    <div class="landing-overlay"></div>
+  </div>
+  <nav class="landing-nav">
+    <div class="landing-nav-logo">
+      <div class="logo-icon sm neu-logo"><img src="neu-logo.svg" alt="NEU"/></div>
+      <span>NEU Library</span>
+    </div>
+    <div class="landing-clock">
+      <div class="clock-time" id="clock-time">--:--:-- --</div>
+      <div class="clock-date" id="clock-date">--- --, ----</div>
+    </div>
+  </nav>
+  <div class="landing-hero">
+    <div class="landing-hero-content">
+      <div class="landing-eyebrow"><i class="fas fa-circle-dot"></i> New Era University</div>
+      <h1 class="landing-title">Welcome to the<br/><span class="landing-title-accent">NEU Library</span></h1>
+      <p class="landing-desc">Your gateway to knowledge. Log your visit, explore resources, and make the most of the NEU Library experience.</p>
+      <div class="landing-actions">
+        <button class="btn-landing-primary" id="btn-landing-enter">
+          <i class="fas fa-right-to-bracket"></i> Log My Visit
+        </button>
+        <button class="btn-landing-secondary" id="btn-landing-admin">
+          <i class="fas fa-shield-halved"></i> Admin Access
+        </button>
+      </div>
+    </div>
+    <div class="landing-stats-card">
+      <div class="landing-stat">
+        <span class="landing-stat-num" id="landing-stat-today">—</span>
+        <span class="landing-stat-label">Visitors Today</span>
+      </div>
+      <div class="landing-stat-divider"></div>
+      <div class="landing-stat">
+        <span class="landing-stat-num" id="landing-stat-month">—</span>
+        <span class="landing-stat-label">This Month</span>
+      </div>
+      <div class="landing-stat-divider"></div>
+      <div class="landing-stat">
+        <span class="landing-stat-num" id="landing-stat-total">—</span>
+        <span class="landing-stat-label">Total Visits</span>
+      </div>
+    </div>
+  </div>
+  <div class="landing-footer-strip">
+    <span><i class="fas fa-wifi"></i> Real-time visitor tracking</span>
+    <span><i class="fas fa-shield-halved"></i> Secure access</span>
+    <span><i class="fas fa-clock"></i> Full visit history</span>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════ LOGIN SCREEN ══ -->
-<div id="screen-login" class="screen active">
+<div id="screen-login" class="screen">
   <div class="login-bg">
     <div class="login-orb orb1"></div>
     <div class="login-orb orb2"></div>
     <div class="login-orb orb3"></div>
   </div>
   <div class="login-card">
+    <button class="back-to-landing-btn" id="btn-back-to-landing"><i class="fas fa-arrow-left"></i> Back</button>
     <div class="login-logo">
       <div class="logo-icon neu-logo"><img src="neu-logo.svg" alt="NEU Logo"/></div>
       <div>
@@ -25,17 +81,10 @@
         <p class="brand-sub">Visitor Log System</p>
       </div>
     </div>
-
     <div class="tab-switcher">
-      <button class="tab-btn active" data-tab="email">
-        <i class="fas fa-envelope"></i> Email
-      </button>
-      <button class="tab-btn" data-tab="rfid">
-        <i class="fas fa-id-card"></i> RFID
-      </button>
+      <button class="tab-btn active" data-tab="email"><i class="fas fa-envelope"></i> Email</button>
+      <button class="tab-btn" data-tab="rfid"><i class="fas fa-id-card"></i> RFID</button>
     </div>
-
-    <!-- Email Login -->
     <div id="tab-email" class="tab-panel active">
       <div class="input-group">
         <label>Institutional Email</label>
@@ -45,9 +94,14 @@
         </div>
         <span class="hint">Use your Google-based institutional email</span>
       </div>
+      <div class="input-group" id="email-name-group">
+        <label>Full Name</label>
+        <div class="input-wrap">
+          <i class="fas fa-user"></i>
+          <input type="text" id="login-name-email" placeholder="e.g. Juan dela Cruz" autocomplete="off"/>
+        </div>
+      </div>
     </div>
-
-    <!-- RFID Login -->
     <div id="tab-rfid" class="tab-panel">
       <div class="input-group">
         <label>RFID / ID Number</label>
@@ -57,20 +111,26 @@
         </div>
         <span class="hint">Tap your RFID card or enter your ID number</span>
       </div>
+      <div class="input-group">
+        <label>Full Name</label>
+        <div class="input-wrap">
+          <i class="fas fa-user"></i>
+          <input type="text" id="login-name-rfid" placeholder="e.g. Juan dela Cruz" autocomplete="off"/>
+        </div>
+      </div>
     </div>
-
     <div id="login-error" class="error-msg hidden"></div>
-
-    <button class="btn-primary" id="btn-login">
-      <span>Continue</span><i class="fas fa-arrow-right"></i>
+    <!-- Suggestions dropdown -->
+    <div id="login-suggestions" class="suggestions-dropdown hidden"></div>
+    <button class="btn-primary" id="btn-login"><span>Continue</span><i class="fas fa-arrow-right"></i></button>
+    <div class="auth-divider"><span>or</span></div>
+    <button class="btn-google" id="btn-google-visitor">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18"/>
+      Continue with Google
     </button>
-
-    <div class="admin-link">
-      <button id="btn-admin-login" class="link-btn">Admin Login →</button>
-    </div>
+    <div class="admin-link"><button id="btn-admin-login" class="link-btn">Admin Login →</button></div>
   </div>
 </div>
-
 
 <!-- ═══════════════════════════════════════════ ROLE SCREEN ══ -->
 <div id="screen-role" class="screen">
@@ -78,10 +138,7 @@
   <div class="role-card">
     <div class="purpose-header">
       <button id="btn-back-role" class="back-btn"><i class="fas fa-arrow-left"></i></button>
-      <div>
-        <h2>Who are you?</h2>
-        <p id="role-greeting">Please select your role to continue.</p>
-      </div>
+      <div><h2>Who are you?</h2><p id="role-greeting">Please select your role to continue.</p></div>
     </div>
     <div class="role-grid">
       <button class="role-btn" data-role="Student">
@@ -104,17 +161,128 @@
   <div class="program-card">
     <div class="purpose-header">
       <button id="btn-back-program" class="back-btn"><i class="fas fa-arrow-left"></i></button>
-      <div>
-        <h2>Your Program</h2>
-        <p id="program-greeting">Select your current college program.</p>
+      <div><h2>Your Program</h2><p id="program-greeting">Select your current college program.</p></div>
+    </div>
+    <div class="input-group" style="margin-bottom:0">
+      <label>College &amp; Program</label>
+      <div class="input-wrap">
+        <i class="fas fa-graduation-cap"></i>
+        <select id="program-select" class="program-select">
+          <option value="">— Select your program —</option>
+
+          <optgroup label="College of Accountancy">
+            <option value="BSA">Bachelor of Science in Accountancy</option>
+          </optgroup>
+
+          <optgroup label="College of Agriculture">
+            <option value="BSAgri">Bachelor of Science in Agriculture</option>
+          </optgroup>
+
+          <optgroup label="College of Arts and Sciences">
+            <option value="AB Economics">Bachelor of Arts in Economics</option>
+            <option value="AB Political Science">Bachelor of Arts in Political Science</option>
+            <option value="BS Biology">Bachelor of Science in Biology</option>
+            <option value="BS Psychology">Bachelor of Science in Psychology</option>
+            <option value="AB Public Administration">Bachelor of Public Administration</option>
+          </optgroup>
+
+          <optgroup label="College of Business Administration">
+            <option value="BSBA-FM">BSBA Major in Financial Management</option>
+            <option value="BSBA-HRDM">BSBA Major in Human Resource Development Management</option>
+            <option value="BSBA-LM">BSBA Major in Legal Management</option>
+            <option value="BSBA-MM">BSBA Major in Marketing Management</option>
+            <option value="BS Entrepreneurship">Bachelor of Science in Entrepreneurship</option>
+            <option value="BS Real Estate Management">Bachelor of Science in Real Estate Management</option>
+          </optgroup>
+
+          <optgroup label="College of Communication">
+            <option value="AB Broadcasting">Bachelor of Arts in Broadcasting</option>
+            <option value="AB Communication">Bachelor of Arts in Communication</option>
+            <option value="AB Journalism">Bachelor of Arts in Journalism</option>
+          </optgroup>
+
+          <optgroup label="College of Criminology">
+            <option value="BS Criminology">Bachelor of Science in Criminology</option>
+          </optgroup>
+
+          <optgroup label="College of Education">
+            <option value="BEEd">Bachelor of Elementary Education</option>
+            <option value="BSEd-English">BSEd Major in English</option>
+            <option value="BSEd-Filipino">BSEd Major in Filipino</option>
+            <option value="BSEd-Math">BSEd Major in Mathematics</option>
+            <option value="BSEd-MAPEH">BSEd Major in MAPEH</option>
+            <option value="BSEd-Science">BSEd Major in Science</option>
+            <option value="BSEd-Social Studies">BSEd Major in Social Studies</option>
+            <option value="BSEd-TLE">BSEd Major in TLE</option>
+          </optgroup>
+
+          <optgroup label="College of Engineering and Architecture">
+            <option value="BS Architecture">Bachelor of Science in Architecture</option>
+            <option value="BS Astronomy">Bachelor of Science in Astronomy</option>
+            <option value="BS Civil Eng">Bachelor of Science in Civil Engineering</option>
+            <option value="BS Electrical Eng">Bachelor of Science in Electrical Engineering</option>
+            <option value="BS Electronics Eng">Bachelor of Science in Electronics Engineering</option>
+            <option value="BS Industrial Eng">Bachelor of Science in Industrial Engineering</option>
+            <option value="BS Mechanical Eng">Bachelor of Science in Mechanical Engineering</option>
+          </optgroup>
+
+          <optgroup label="College of Informatics and Computing Studies">
+            <option value="BLIS">Bachelor of Library and Information Science</option>
+            <option value="BS Computer Science">Bachelor of Science in Computer Science</option>
+            <option value="BS EMC">BS in Entertainment and Multimedia Computing</option>
+            <option value="BS Information Systems">Bachelor of Science in Information Systems</option>
+            <option value="BSIT">Bachelor of Science in Information Technology</option>
+          </optgroup>
+
+          <optgroup label="College of Medical Technology">
+            <option value="BS Medical Technology">Bachelor of Science in Medical Technology</option>
+          </optgroup>
+
+          <optgroup label="College of Midwifery">
+            <option value="Diploma in Midwifery">Diploma in Midwifery</option>
+          </optgroup>
+
+          <optgroup label="College of Music">
+            <option value="BMus-Choral">Bachelor of Music in Choral Conducting</option>
+            <option value="BMus-Music Ed">Bachelor of Music in Music Education</option>
+            <option value="BMus-Piano">Bachelor of Music in Piano</option>
+            <option value="BMus-Voice">Bachelor of Music in Voice</option>
+          </optgroup>
+
+          <optgroup label="College of Nursing">
+            <option value="BSN">Bachelor of Science in Nursing</option>
+          </optgroup>
+
+          <optgroup label="College of Physical Therapy">
+            <option value="BS Physical Therapy">Bachelor of Science in Physical Therapy</option>
+          </optgroup>
+
+          <optgroup label="College of Respiratory Therapy">
+            <option value="BS Respiratory Therapy">Bachelor of Science in Respiratory Therapy</option>
+          </optgroup>
+
+          <optgroup label="School of International Relations">
+            <option value="AB Foreign Service">Bachelor of Arts in Foreign Service</option>
+          </optgroup>
+
+          <optgroup label="College of Law">
+            <option value="Juris Doctor">Juris Doctor</option>
+          </optgroup>
+
+          <optgroup label="College of Medicine">
+            <option value="Doctor of Medicine">Doctor of Medicine</option>
+          </optgroup>
+
+          <optgroup label="School of Graduate Studies">
+            <option value="MBA">Master in Business Administration</option>
+            <option value="MAEd">Master of Arts in Education</option>
+            <option value="PhD Education">Doctor of Philosophy in Education</option>
+            <option value="DBA">Doctor in Business Administration</option>
+          </optgroup>
+        </select>
       </div>
     </div>
-    <div class="program-grid" id="program-grid">
-      <!-- Populated by JS from CONFIG.programs -->
-    </div>
-    <button class="btn-primary" id="btn-confirm-program" disabled>
-      <span>Next</span><i class="fas fa-arrow-right"></i>
-    </button>
+    <button class="btn-primary" id="btn-confirm-program" disabled style="margin-top:20px"><span>Next</span><i class="fas fa-arrow-right"></i></button>
   </div>
 </div>
 
@@ -123,43 +291,18 @@
   <div class="purpose-bg"></div>
   <div class="purpose-card">
     <div class="purpose-header">
-      <button id="btn-back-purpose" class="back-btn" title="Back to program"><i class="fas fa-arrow-left"></i></button>
-      <div>
-        <h2>Purpose of Visit</h2>
-        <p id="purpose-greeting">Hello! What brings you to the library today?</p>
-      </div>
+      <button id="btn-back-purpose" class="back-btn"><i class="fas fa-arrow-left"></i></button>
+      <div><h2>Purpose of Visit</h2><p id="purpose-greeting">What brings you to the library today?</p></div>
     </div>
-
     <div class="purpose-grid">
-      <button class="purpose-btn" data-purpose="Reading">
-        <div class="purpose-icon"><i class="fas fa-book"></i></div>
-        <span>Reading</span>
-      </button>
-      <button class="purpose-btn" data-purpose="Researching">
-        <div class="purpose-icon"><i class="fas fa-magnifying-glass"></i></div>
-        <span>Researching</span>
-      </button>
-      <button class="purpose-btn" data-purpose="Studying">
-        <div class="purpose-icon"><i class="fas fa-graduation-cap"></i></div>
-        <span>Studying</span>
-      </button>
-      <button class="purpose-btn" data-purpose="Use of Computer">
-        <div class="purpose-icon"><i class="fas fa-computer"></i></div>
-        <span>Use of Computer</span>
-      </button>
-      <button class="purpose-btn" data-purpose="Group Study">
-        <div class="purpose-icon"><i class="fas fa-users"></i></div>
-        <span>Group Study</span>
-      </button>
-      <button class="purpose-btn" data-purpose="Other">
-        <div class="purpose-icon"><i class="fas fa-ellipsis"></i></div>
-        <span>Other</span>
-      </button>
+      <button class="purpose-btn" data-purpose="Reading"><div class="purpose-icon"><i class="fas fa-book"></i></div><span>Reading</span></button>
+      <button class="purpose-btn" data-purpose="Researching"><div class="purpose-icon"><i class="fas fa-magnifying-glass"></i></div><span>Researching</span></button>
+      <button class="purpose-btn" data-purpose="Studying"><div class="purpose-icon"><i class="fas fa-graduation-cap"></i></div><span>Studying</span></button>
+      <button class="purpose-btn" data-purpose="Use of Computer"><div class="purpose-icon"><i class="fas fa-computer"></i></div><span>Use of Devices</span></button>
+      <button class="purpose-btn" data-purpose="Group Study"><div class="purpose-icon"><i class="fas fa-users"></i></div><span>Group Study</span></button>
+      <button class="purpose-btn" data-purpose="Other"><div class="purpose-icon"><i class="fas fa-ellipsis"></i></div><span>Other</span></button>
     </div>
-
-    <button class="btn-primary" id="btn-confirm-purpose" disabled>
-      <span>Log My Visit</span><i class="fas fa-check"></i>
-    </button>
+    <button class="btn-primary" id="btn-confirm-purpose" disabled><span>Log My Visit</span><i class="fas fa-check"></i></button>
   </div>
 </div>
 
@@ -190,240 +333,186 @@
     <div class="login-orb orb3"></div>
   </div>
   <div class="login-card">
+    <button class="back-to-landing-btn" id="btn-back-admin-to-landing"><i class="fas fa-arrow-left"></i> Back</button>
     <div class="login-logo">
       <div class="logo-icon fallback-red"><i class="fas fa-shield-halved"></i></div>
-      <div>
-        <h1 class="brand">Admin Access</h1>
-        <p class="brand-sub">Library Management</p>
-      </div>
+      <div><h1 class="brand">Admin Access</h1><p class="brand-sub">Library Management</p></div>
     </div>
     <div class="input-group">
       <label>Admin Email</label>
       <div class="input-wrap">
         <i class="fas fa-user-shield"></i>
-        <input type="email" id="admin-email" placeholder="admin@neu.edu.ph"/>
-      </div>
-    </div>
-    <div class="input-group">
-      <label>Password</label>
-      <div class="input-wrap">
-        <i class="fas fa-lock"></i>
-        <input type="password" id="admin-password" placeholder="Enter password"/>
-        <button class="toggle-pw" id="toggle-pw"><i class="fas fa-eye"></i></button>
+        <input type="email" id="admin-email" placeholder="jcesperanza@neu.edu.ph"/>
       </div>
     </div>
     <div id="admin-login-error" class="error-msg hidden"></div>
-    <button class="btn-primary" id="btn-admin-submit">
-      <span>Sign In</span><i class="fas fa-arrow-right"></i>
+    <button class="btn-primary" id="btn-admin-submit"><span>Sign In</span><i class="fas fa-arrow-right"></i></button>
+    <div class="auth-divider"><span>or</span></div>
+    <button class="btn-google" id="btn-google-admin">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18"/>
+      Sign in with Google
     </button>
-    <div class="admin-link">
-      <button id="btn-back-to-visitor" class="link-btn">← Back to Visitor Login</button>
-    </div>
-    <div class="demo-hint">
-      <i class="fas fa-circle-info"></i>
-      Demo credentials: jcesperanza@neu.edu.ph / admin123
-    </div>
+    <div class="admin-link"><button id="btn-back-to-visitor" class="link-btn">← Visitor Login</button></div>
+    <div class="demo-hint"><i class="fas fa-circle-info"></i> Admin:           jcesperanza@neu.edu.ph</div>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════ ADMIN DASHBOARD ══ -->
 <div id="screen-dashboard" class="screen">
-  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-brand">
       <div class="logo-icon sm neu-logo"><img src="neu-logo.svg" alt="NEU"/></div>
-      <div class="sidebar-brand-text">
-        <strong>NEU Library</strong>
-        <span>Visitor Log System</span>
-      </div>
+      <div class="sidebar-brand-text"><strong>NEU Library</strong><span>Visitor Log System</span></div>
     </div>
     <nav class="sidebar-nav">
-      <a href="#" class="nav-item active" data-view="overview">
-        <i class="fas fa-chart-pie"></i><span>Overview</span>
-      </a>
-      <a href="#" class="nav-item" data-view="visitors">
-        <i class="fas fa-users"></i><span>Visitors</span>
-      </a>
-      <a href="#" class="nav-item" data-view="users">
-        <i class="fas fa-user-gear"></i><span>User Management</span>
-      </a>
-      <a href="#" class="nav-item" data-view="blocked">
-        <i class="fas fa-ban"></i><span>Blocked Users</span>
-        <span id="blocked-nav-count" class="nav-badge" style="display:none">0</span>
-      </a>
+      <a href="#" class="nav-item active" data-view="overview"><i class="fas fa-chart-pie"></i><span>Overview</span></a>
+      <a href="#" class="nav-item" data-view="visitors"><i class="fas fa-users"></i><span>Visitors</span></a>
+      <a href="#" class="nav-item" data-view="users"><i class="fas fa-user-gear"></i><span>User Management</span></a>
+      <a href="#" class="nav-item" data-view="blocked"><i class="fas fa-ban"></i><span>Blocked Users</span><span id="blocked-nav-count" class="nav-badge" style="display:none">0</span></a>
     </nav>
     <div class="sidebar-footer">
-      <button id="btn-admin-logout" class="logout-btn">
-        <i class="fas fa-right-from-bracket"></i><span>Logout</span>
-      </button>
+      <button id="btn-admin-logout" class="logout-btn"><i class="fas fa-right-from-bracket"></i><span>Logout</span></button>
     </div>
   </aside>
 
-  <!-- Main Content -->
   <main class="dashboard-main">
     <header class="dash-header">
       <div class="dash-title" id="dash-view-title">Overview</div>
-      <div class="dash-search-wrap">
-        <i class="fas fa-magnifying-glass"></i>
-        <input type="text" id="dash-search" placeholder="Search by name, email, college, purpose…"/>
-        <button id="btn-clear-filter" class="clear-btn" title="Clear filters"><i class="fas fa-xmark"></i></button>
+      <div class="dash-search-container">
+        <div class="dash-search-wrap">
+          <i class="fas fa-magnifying-glass"></i>
+          <input type="text" id="dash-search" placeholder="Search name, email, college, purpose…" autocomplete="off"/>
+          <button id="btn-clear-filter" class="clear-btn" title="Clear"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div id="dash-search-suggestions" class="suggestions-dropdown hidden"></div>
       </div>
-      <div class="admin-badge">
-        <i class="fas fa-user-shield"></i>
-        <span id="admin-name-badge">Admin</span>
-      </div>
+      <div class="admin-badge"><i class="fas fa-user-shield"></i><span id="admin-name-badge">Admin</span></div>
     </header>
 
-    <!-- ── Overview View ── -->
+    <!-- Overview -->
     <section id="view-overview" class="dash-view active">
+    <!-- Rotating Quote Banner -->
+    <div class="quote-banner" id="quote-banner">
+      <div class="quote-inner">
+        <div class="quote-icon"><i class="fas fa-book-open"></i></div>
+        <div class="quote-body">
+          <p class="quote-text" id="quote-text"></p>
+          <p class="quote-author" id="quote-author"></p>
+        </div>
+      </div>
+      <div class="quote-dots" id="quote-dots"></div>
+    </div>
+
       <div class="stats-grid">
-        <div class="stat-card accent-red">
-          <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Today</span>
-            <span class="stat-num" id="stat-today">0</span>
-          </div>
-        </div>
-        <div class="stat-card accent-green">
-          <div class="stat-icon"><i class="fas fa-calendar-week"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">This Week</span>
-            <span class="stat-num" id="stat-week">0</span>
-          </div>
-        </div>
-        <div class="stat-card accent-crimson">
-          <div class="stat-icon"><i class="fas fa-calendar"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">This Month</span>
-            <span class="stat-num" id="stat-month">0</span>
-          </div>
-        </div>
-        <div class="stat-card accent-forest">
-          <div class="stat-icon"><i class="fas fa-users"></i></div>
-          <div class="stat-body">
-            <span class="stat-label">Total Visits</span>
-            <span class="stat-num" id="stat-total">0</span>
-          </div>
-        </div>
+        <div class="stat-card accent-red"><div class="stat-icon"><i class="fas fa-calendar-day"></i></div><div class="stat-body"><span class="stat-label">Today</span><span class="stat-num" id="stat-today">0</span></div></div>
+        <div class="stat-card accent-green"><div class="stat-icon"><i class="fas fa-calendar-week"></i></div><div class="stat-body"><span class="stat-label">This Week</span><span class="stat-num" id="stat-week">0</span></div></div>
+        <div class="stat-card accent-crimson"><div class="stat-icon"><i class="fas fa-calendar"></i></div><div class="stat-body"><span class="stat-label">This Month</span><span class="stat-num" id="stat-month">0</span></div></div>
+        <div class="stat-card accent-forest"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-body"><span class="stat-label">Total Visits</span><span class="stat-num" id="stat-total">0</span></div></div>
       </div>
-
-      <!-- College Breakdown -->
-      <div class="section-header">
-        <h3>Visits by College</h3>
-        <span class="badge" id="college-period-label">All Time</span>
-      </div>
-      <div class="chart-wrap">
-        <canvas id="college-chart"></canvas>
-      </div>
-
-      <!-- Purpose Breakdown -->
-      <div class="section-header">
-        <h3>Visit Purposes</h3>
-      </div>
+      <div class="section-header"><h3>Visits by College</h3><span class="badge">All Time</span></div>
+      <div class="chart-wrap"><canvas id="college-chart"></canvas></div>
+      <div class="section-header"><h3>Visit Purposes</h3></div>
       <div class="purpose-bars" id="purpose-bars"></div>
-
-      <!-- Recent Visits Table -->
-      <div class="section-header">
-        <h3>Recent Visits</h3>
-      </div>
+      <div class="section-header"><h3>Recent Visits</h3></div>
       <div class="table-wrap">
-        <table class="visit-table" id="recent-table">
-          <thead>
-            <tr>
-              <th>Name</th><th>Email / RFID</th><th>College</th><th>Role</th><th>Purpose</th><th>Program</th><th>Time In</th><th>Status</th>
-            </tr>
-          </thead>
+        <table class="visit-table">
+          <thead><tr><th>Name</th><th>Email / RFID</th><th>College</th><th>Role</th><th>Purpose</th><th>Program</th><th>Time In</th><th>Status</th></tr></thead>
           <tbody id="recent-tbody"></tbody>
         </table>
       </div>
     </section>
 
-    <!-- ── Visitors View ── -->
+    <!-- Visitors -->
     <section id="view-visitors" class="dash-view">
-      <!-- Visitors filter bar -->
+      <!-- Quick filter buttons -->
+      <div class="visitors-quick-filters">
+        <button class="quick-filter-btn active" data-quick="all"><i class="fas fa-list"></i> All Time</button>
+        <button class="quick-filter-btn" data-quick="today"><i class="fas fa-calendar-day"></i> Today</button>
+        <button class="quick-filter-btn" data-quick="week"><i class="fas fa-calendar-week"></i> This Week</button>
+        <button class="quick-filter-btn" data-quick="month"><i class="fas fa-calendar"></i> This Month</button>
+      </div>
+      <!-- Advanced filters -->
       <div class="visitors-filter-bar">
-        <div class="date-range-group">
-          <label>From</label>
-          <input type="date" id="date-from" class="date-input"/>
-        </div>
-        <div class="date-range-group">
-          <label>To</label>
-          <input type="date" id="date-to" class="date-input"/>
-        </div>
+        <div class="date-range-group"><label>From</label><input type="date" id="date-from" class="date-input"/></div>
+        <div class="date-range-group"><label>To</label><input type="date" id="date-to" class="date-input"/></div>
         <select id="dash-role-filter" class="role-filter-select-inline">
           <option value="">All Roles</option>
           <option value="Student">Student</option>
           <option value="Employee">Employee</option>
         </select>
-        <button id="btn-apply-filter" class="btn-filter-apply">
-          <i class="fas fa-filter"></i> Apply
-        </button>
-        <button id="btn-reset-filter" class="btn-filter-reset">
-          <i class="fas fa-xmark"></i> Reset
-        </button>
+        <select id="dash-purpose-filter" class="role-filter-select-inline">
+          <option value="">All Purposes</option>
+          <option value="Reading">Reading</option>
+          <option value="Researching">Researching</option>
+          <option value="Studying">Studying</option>
+          <option value="Use of Computer">Use of Computer</option>
+          <option value="Group Study">Group Study</option>
+          <option value="Other">Other</option>
+        </select>
+        <select id="dash-college-filter" class="role-filter-select-inline">
+          <option value="">All Colleges</option>
+          <option value="CAcc">CAcc — Accountancy</option>
+          <option value="CAgri">CAgri — Agriculture</option>
+          <option value="CAS">CAS — Arts and Sciences</option>
+          <option value="CBA">CBA — Business Administration</option>
+          <option value="CCom">CCom — Communication</option>
+          <option value="CCrim">CCrim — Criminology</option>
+          <option value="CED">CED — Education</option>
+          <option value="CEA">CEA — Engineering and Architecture</option>
+          <option value="CICS">CICS — Informatics and Computing Studies</option>
+          <option value="CMedTech">CMedTech — Medical Technology</option>
+          <option value="CMid">CMid — Midwifery</option>
+          <option value="CMus">CMus — Music</option>
+          <option value="CN">CN — Nursing</option>
+          <option value="CPT">CPT — Physical Therapy</option>
+          <option value="CRT">CRT — Respiratory Therapy</option>
+          <option value="SIR">SIR — International Relations</option>
+          <option value="CL">CL — Law</option>
+          <option value="CMed">CMed — Medicine</option>
+          <option value="SGS">SGS — Graduate Studies</option>
+        </select>
+        <button id="btn-apply-filter" class="btn-filter-apply"><i class="fas fa-filter"></i> Apply</button>
+        <button id="btn-reset-filter" class="btn-filter-reset"><i class="fas fa-xmark"></i> Reset</button>
       </div>
       <div class="table-wrap">
-        <table class="visit-table" id="visitors-table">
-          <thead>
-            <tr>
-              <th>Name</th><th>Email / RFID</th><th>College</th><th>Role</th><th>Purpose</th><th>Program</th><th>Date &amp; Time</th><th>Status</th>
-            </tr>
-          </thead>
+        <table class="visit-table">
+          <thead><tr><th>Name</th><th>Email / RFID</th><th>College</th><th>Role</th><th>Purpose</th><th>Program</th><th>Date &amp; Time</th><th>Status</th></tr></thead>
           <tbody id="visitors-tbody"></tbody>
         </table>
-        <div id="visitors-empty" class="empty-state hidden">
-          <i class="fas fa-magnifying-glass"></i>
-          <p>No visitors found</p>
-        </div>
+        <div id="visitors-empty" class="empty-state hidden"><i class="fas fa-magnifying-glass"></i><p>No visitors found</p></div>
       </div>
     </section>
 
-    <!-- ── Blocked Users View ── -->
+    <!-- Blocked -->
     <section id="view-blocked" class="dash-view">
       <div class="table-wrap">
-        <table class="visit-table" id="blocked-table">
-          <thead>
-            <tr>
-              <th>Name</th><th>Email / RFID</th><th>College</th><th>Total Visits</th><th>Status</th><th>Action</th>
-            </tr>
-          </thead>
+        <table class="visit-table">
+          <thead><tr><th>Name</th><th>Email / RFID</th><th>College</th><th>Total Visits</th><th>Status</th><th>Action</th></tr></thead>
           <tbody id="blocked-tbody"></tbody>
         </table>
-        <div id="blocked-empty" class="empty-state hidden">
-          <i class="fas fa-ban"></i>
-          <p>No blocked users</p>
-        </div>
+        <div id="blocked-empty" class="empty-state hidden"><i class="fas fa-ban"></i><p>No blocked users</p></div>
       </div>
     </section>
 
-    <!-- ── User Management View ── -->
+    <!-- Users -->
     <section id="view-users" class="dash-view">
       <div class="table-wrap">
-        <table class="visit-table" id="users-table">
-          <thead>
-            <tr>
-              <th>Name</th><th>Email / RFID</th><th>College</th><th>Total Visits</th><th>Last Visit</th><th>Status</th><th>Action</th>
-            </tr>
-          </thead>
+        <table class="visit-table">
+          <thead><tr><th>Name</th><th>Email / RFID</th><th>College</th><th>Total Visits</th><th>Last Visit</th><th>Status</th><th>Action</th></tr></thead>
           <tbody id="users-tbody"></tbody>
         </table>
-        <div id="users-empty" class="empty-state hidden">
-          <i class="fas fa-users"></i>
-          <p>No users found</p>
-        </div>
+        <div id="users-empty" class="empty-state hidden"><i class="fas fa-users"></i><p>No users found</p></div>
       </div>
     </section>
   </main>
 </div>
 
-<!-- ═══════════════════════════════════════════ MODALS ══ -->
-
-<!-- Block User Confirm -->
+<!-- MODALS -->
 <div id="modal-block" class="modal-overlay hidden">
   <div class="modal-card">
     <div class="modal-icon warn"><i class="fas fa-ban"></i></div>
-    <h3 id="modal-block-title">Block User?</h3>
-    <p id="modal-block-body">Are you sure you want to block this user? They will not be able to log visits.</p>
+    <h3>Block User?</h3>
+    <p>Are you sure? This user will not be able to log visits.</p>
     <div class="modal-actions">
       <button class="btn-outline" id="modal-cancel">Cancel</button>
       <button class="btn-danger" id="modal-confirm-block">Block User</button>
@@ -431,7 +520,6 @@
   </div>
 </div>
 
-<!-- Unblock User Confirm -->
 <div id="modal-unblock" class="modal-overlay hidden">
   <div class="modal-card">
     <div class="modal-icon success"><i class="fas fa-circle-check"></i></div>
@@ -444,23 +532,19 @@
   </div>
 </div>
 
-<!-- Blocked Notification -->
 <div id="modal-blocked" class="modal-overlay hidden">
   <div class="modal-card">
     <div class="modal-icon danger"><i class="fas fa-ban"></i></div>
     <h3>Access Denied</h3>
     <p>Your account has been blocked by the administrator. Please contact library staff.</p>
-    <div class="modal-actions">
-      <button class="btn-primary" id="modal-blocked-ok">OK</button>
-    </div>
+    <div class="modal-actions"><button class="btn-primary" id="modal-blocked-ok">OK</button></div>
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast" class="toast hidden"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="supabase-db.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
