@@ -550,6 +550,17 @@ function showScreen(id) {
   const el = document.getElementById('screen-' + id);
   if (el) el.classList.add('active');
   state.currentScreen = id;
+
+  // Auto-refresh: run immediately on screen change, then keep polling
+  if (id === 'landing') {
+    loadLandingStats();
+    startAutoRefresh();
+  } else if (id === 'dashboard') {
+    startAutoRefresh();
+  } else {
+    // Kiosk flow screens — pause refresh to avoid unnecessary DB calls
+    stopAutoRefresh();
+  }
 }
 
 function showDashView(view) {
@@ -1366,6 +1377,34 @@ document.getElementById('btn-reset-filter')?.addEventListener('click', () => {
 document.getElementById('btn-google-visitor')?.addEventListener('click', () => signInWithGoogle('visitor'));
 document.getElementById('btn-google-admin')?.addEventListener('click',   () => signInWithGoogle('admin'));
 
+
+// ══════════════════════════════════════════════════
+// ── AUTO-REFRESH (every 5 seconds) ───────────────
+// ══════════════════════════════════════════════════
+
+let autoRefreshInterval = null;
+
+function startAutoRefresh() {
+  stopAutoRefresh(); // clear any existing
+  autoRefreshInterval = setInterval(async () => {
+    // Only refresh if on the landing screen or admin dashboard
+    if (state.currentScreen === 'landing') {
+      await loadLandingStats();
+    } else if (state.currentScreen === 'dashboard') {
+      // Invalidate cache so fresh data is fetched
+      state.allVisits = [];
+      await renderView(state.currentView);
+    }
+  }, 5000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+}
+
 // ══════════════════════════════════════════════════
 // ── INIT ─────────────────────────────────────────
 // ══════════════════════════════════════════════════
@@ -1373,6 +1412,7 @@ document.getElementById('btn-google-admin')?.addEventListener('click',   () => s
 startClock();
 loadLandingStats();
 initQuotes();
+startAutoRefresh();
 
 // Check if returning from Google OAuth redirect
 handleAuthCallback().then(wasCallback => {
