@@ -1604,15 +1604,17 @@ body::before {
   pointer-events: none;
 }
 
-/* ── MODAL CARD bottom ornament ── */
-.modal-card .modal-actions::before {
+/* ── MODAL CARD ornament — moved to modal-card::after instead ── */
+.modal-card::after {
   content: '— ✦ —';
-  display: block;
-  text-align: center;
-  font-size: 10px;
-  color: rgba(201,168,76,0.2);
+  position: absolute;
+  bottom: 16px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: rgba(201,168,76,0.15);
   letter-spacing: 4px;
-  margin-bottom: 8px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 /* ── WELCOME SCREEN — ornamental ring around check ── */
