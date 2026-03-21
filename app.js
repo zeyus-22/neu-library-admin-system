@@ -298,8 +298,7 @@ async function handleAuthCallback() {
                           url.includes('error_description=');
 
   if (!isFreshRedirect) {
-    // No fresh redirect — clear any stale session and go to landing
-    await getClient().auth.signOut().catch(() => {});
+    // No fresh redirect — just return false, don't touch auth state
     return false;
   }
 
@@ -550,17 +549,6 @@ function showScreen(id) {
   const el = document.getElementById('screen-' + id);
   if (el) el.classList.add('active');
   state.currentScreen = id;
-
-  // Auto-refresh: run immediately on screen change, then keep polling
-  if (id === 'landing') {
-    loadLandingStats();
-    startAutoRefresh();
-  } else if (id === 'dashboard') {
-    startAutoRefresh();
-  } else {
-    // Kiosk flow screens — pause refresh to avoid unnecessary DB calls
-    stopAutoRefresh();
-  }
 }
 
 function showDashView(view) {
@@ -865,6 +853,8 @@ function handleAdminLogout() {
   state.adminLoggedIn = false;
   document.getElementById('admin-email').value = '';
   showScreen('landing');
+  // Refresh landing stats immediately after logout
+  loadLandingStats();
 }
 
 // ══════════════════════════════════════════════════
