@@ -767,8 +767,14 @@ async function handleLogin() {
   state.currentUser = user;
 
   // ── Returning user shortcut ──
-  // If we already know their role and program, skip straight to purpose
-  if (user.role && (user.role === 'Employee' || user.program)) {
+  // Debug: log what we got from DB
+  console.log('User loaded — role:', user.role, '| program:', user.program);
+
+  // If we already know their role, and either they're an Employee
+  // OR they're a Student with a saved program → skip to purpose
+  const hasRole    = user.role === 'Employee' || user.role === 'Student';
+  const hasProgram = user.role === 'Employee' || !!user.program;
+  if (hasRole && hasProgram) {
     state.selectedRole    = user.role;
     state.selectedProgram = user.program || null;
     const firstName = user.name.split(' ')[0];
@@ -833,13 +839,16 @@ function handleRoleSelect(role) {
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
   document.querySelector(`.role-btn[data-role="${role}"]`)?.classList.add('selected');
 
-  // Persist role to user record
+  // Persist role to user record immediately (fire-and-forget but log errors)
   if (state.currentUser) {
+    state.currentUser.role = role; // update local state first so shortcut works next time
     getClient().from('library_users')
       .update({ role })
       .eq('id', state.currentUser.id)
-      .then(({ error }) => { if (error) console.error('Role update error:', error); });
-    state.currentUser.role = role;
+      .then(({ data, error }) => {
+        if (error) console.error('Role update error:', error);
+        else console.log('Role saved:', role, data);
+      });
   }
 
   setTimeout(() => {
@@ -879,12 +888,15 @@ function handleProgramConfirm() {
       updates.college = derivedCollege;
       state.currentUser.college = derivedCollege;
     }
-    state.currentUser.program = state.selectedProgram;
+    state.currentUser.program = state.selectedProgram; // update local state
     // Persist program (and college) to DB
     getClient().from('library_users')
       .update(updates)
       .eq('id', state.currentUser.id)
-      .then(({ error }) => { if (error) console.error('Program update error:', error); });
+      .then(({ data, error }) => {
+        if (error) console.error('Program update error:', error);
+        else console.log('Program saved:', state.selectedProgram, data);
+      });
   }
 
   document.getElementById('purpose-greeting').textContent =
