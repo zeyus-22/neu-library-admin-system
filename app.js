@@ -834,32 +834,34 @@ function resetToLogin() {
 // ── ROLE SCREEN ──────────────────────────────────
 // ══════════════════════════════════════════════════
 
-function handleRoleSelect(role) {
+async function handleRoleSelect(role) {
   state.selectedRole = role;
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
   document.querySelector(`.role-btn[data-role="${role}"]`)?.classList.add('selected');
 
-  // Persist role to user record immediately (fire-and-forget but log errors)
+  // Persist role to user record — await with .select() to confirm save
   if (state.currentUser) {
-    state.currentUser.role = role; // update local state first so shortcut works next time
-    getClient().from('library_users')
+    const { data, error } = await getClient()
+      .from('library_users')
       .update({ role })
       .eq('id', state.currentUser.id)
-      .then(({ data, error }) => {
-        if (error) console.error('Role update error:', error);
-        else console.log('Role saved:', role, data);
-      });
+      .select()
+      .single();
+    if (error) {
+      console.error('Role update error:', error);
+    } else {
+      state.currentUser.role = data.role; // confirm from DB response
+      console.log('Role saved to DB:', data.role);
+    }
   }
 
-  setTimeout(() => {
-    if (role === 'Student') {
-      buildProgramGrid();
-      showScreen('program');
-    } else {
-      document.getElementById('purpose-greeting').textContent = `What brings you to the library today?`;
-      showScreen('purpose');
-    }
-  }, 200);
+  if (role === 'Student') {
+    buildProgramGrid();
+    showScreen('program');
+  } else {
+    document.getElementById('purpose-greeting').textContent = `What brings you to the library today?`;
+    showScreen('purpose');
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -878,27 +880,35 @@ function buildProgramGrid() {
   });
 }
 
-function handleProgramConfirm() {
+async function handleProgramConfirm() {
   if (!state.selectedProgram) return;
+
+  const btn = document.getElementById('btn-confirm-program');
+  btn.disabled = true;
 
   const derivedCollege = CONFIG.programCollegeMap[state.selectedProgram] || state.currentUser?.college;
   if (state.currentUser) {
     const updates = { program: state.selectedProgram };
     if (derivedCollege && derivedCollege !== state.currentUser.college) {
       updates.college = derivedCollege;
-      state.currentUser.college = derivedCollege;
     }
-    state.currentUser.program = state.selectedProgram; // update local state
-    // Persist program (and college) to DB
-    getClient().from('library_users')
+    // Persist program (and college) to DB — await with .select() to confirm
+    const { data, error } = await getClient()
+      .from('library_users')
       .update(updates)
       .eq('id', state.currentUser.id)
-      .then(({ data, error }) => {
-        if (error) console.error('Program update error:', error);
-        else console.log('Program saved:', state.selectedProgram, data);
-      });
+      .select()
+      .single();
+    if (error) {
+      console.error('Program update error:', error);
+    } else {
+      state.currentUser.program = data.program; // confirm from DB
+      state.currentUser.college = data.college;
+      console.log('Program saved to DB:', data.program, '| College:', data.college);
+    }
   }
 
+  btn.disabled = false;
   document.getElementById('purpose-greeting').textContent =
     `${state.selectedProgram} — what brings you to the library today?`;
   showScreen('purpose');
