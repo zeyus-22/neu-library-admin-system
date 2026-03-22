@@ -1737,3 +1737,285 @@ body::before {
   background: linear-gradient(160deg, var(--surface) 0%, var(--parchment-dark) 100%);
   box-shadow: inset 0 0 40px rgba(0,0,0,0.3);
 }
+
+/* ══════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Full Overhaul
+   Targets: phones (≤480px) and small tablets (≤768px)
+══════════════════════════════════════════════════ */
+
+/* ── SHARED MOBILE BASE ── */
+@media (max-width: 768px) {
+
+  /* Allow the active screen to scroll */
+  html, body { overflow: hidden; } /* keep this to prevent double-scroll */
+
+  .screen {
+    position: fixed; inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-items: flex-start; /* don't center vertically — let content flow */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── LANDING PAGE ── */
+  #screen-landing {
+    overflow-y: auto;
+    flex-direction: column;
+  }
+  .landing-nav {
+    padding: 14px 20px;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .landing-nav-logo span { font-size: 14px; }
+  .clock-time { font-size: 18px; }
+  .clock-date { font-size: 11px; }
+
+  .landing-hero {
+    flex-direction: column;
+    padding: 28px 20px 20px;
+    gap: 28px;
+    align-items: flex-start;
+  }
+  .landing-hero-content { max-width: 100%; }
+  .landing-title { font-size: clamp(26px, 8vw, 42px); }
+  .landing-desc { font-size: 15px; margin-bottom: 24px; }
+  .landing-actions { flex-direction: column; gap: 10px; }
+  .btn-landing-primary,
+  .btn-landing-secondary { width: 100%; justify-content: center; padding: 14px 20px; }
+
+  .landing-stats-card {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 20px 16px;
+    gap: 16px;
+  }
+  .landing-stat-num { font-size: 32px; }
+  .landing-stat-divider { display: none; }
+
+  .landing-footer-strip {
+    gap: 16px; padding: 14px 20px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .landing-footer-strip span { font-size: 10px; }
+
+  /* ── LOGIN / ADMIN LOGIN CARDS ── */
+  .login-card {
+    margin: 20px 16px;
+    padding: 36px 24px;
+    width: calc(100% - 32px);
+    max-width: 100%;
+    border-radius: 8px;
+  }
+  .back-to-landing-btn { top: 12px; left: 12px; }
+
+  /* ── ROLE SCREEN ── */
+  .role-card {
+    margin: 20px 16px;
+    padding: 28px 20px;
+    width: calc(100% - 32px);
+    max-width: 100%;
+  }
+  .role-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .role-btn { padding: 24px 12px; }
+  .role-icon { width: 54px; height: 54px; font-size: 24px; }
+  .role-label { font-size: 14px; }
+  .role-sub { font-size: 12px; }
+
+  /* ── PROGRAM SCREEN ── */
+  .program-card {
+    margin: 20px 16px;
+    padding: 28px 20px;
+    width: calc(100% - 32px);
+    max-width: 100%;
+    max-height: none; /* allow natural height on mobile */
+  }
+
+  /* ── PURPOSE SCREEN ── */
+  .purpose-card {
+    margin: 20px 16px;
+    padding: 28px 20px;
+    width: calc(100% - 32px);
+    max-width: 100%;
+  }
+  .purpose-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .purpose-btn { padding: 18px 10px; }
+  .purpose-icon { width: 42px; height: 42px; font-size: 18px; }
+  .purpose-btn span { font-size: 11px; }
+
+  /* ── WELCOME SCREEN ── */
+  .welcome-content { padding: 40px 24px; width: 100%; }
+  .welcome-title { font-size: 24px; }
+  .welcome-name { font-size: 18px; }
+
+  /* ── ADMIN DASHBOARD ── */
+  #screen-dashboard {
+    flex-direction: column;
+    overflow-y: auto;
+    align-items: stretch;
+  }
+
+  /* Sidebar becomes a top nav bar on mobile */
+  .sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--border-gold);
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-shrink: 0;
+  }
+  .sidebar::before {
+    display: none; /* hide the vertical top bar */
+  }
+  .sidebar-brand {
+    display: none; /* hide brand on mobile — saves space */
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    padding: 6px 8px;
+    gap: 4px;
+    flex: 1;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebar-nav::before { display: none; } /* hide ✦ separator */
+  .nav-item {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 14px;
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-item span { display: block; font-size: 9px; } /* show labels again */
+  .nav-item i { width: auto; font-size: 16px; }
+
+  .sidebar-footer {
+    border-top: none;
+    border-left: 1px solid var(--border-gold);
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .logout-btn {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    font-size: 9px;
+  }
+  .logout-btn span { display: block; font-size: 9px; }
+
+  /* Dashboard main area */
+  .dashboard-main {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+  }
+  .dash-header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .dash-title { font-size: 14px; min-width: 80px; }
+  .dash-search-container { min-width: 0; flex: 1 1 100%; order: 3; }
+  .admin-badge { font-size: 11px; padding: 5px 10px; }
+
+  .dash-view { padding: 14px; overflow-y: visible; }
+
+  /* Stats grid — 2 columns on tablet */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-card { padding: 14px; gap: 12px; }
+  .stat-icon { width: 40px; height: 40px; font-size: 18px; }
+  .stat-num { font-size: 28px; }
+  .stat-label { font-size: 9px; }
+
+  /* Chart */
+  .chart-wrap { height: 220px; padding: 14px; }
+
+  /* Purpose bars */
+  .purpose-bar-label { width: 110px; font-size: 13px; }
+
+  /* Visitor filter bar — stack vertically */
+  .visitors-quick-filters { gap: 6px; }
+  .quick-filter-btn { padding: 6px 12px; font-size: 10px; }
+
+  .visitors-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
+  }
+  .date-range-group { width: 100%; }
+  .date-input { width: 100%; }
+  .role-filter-select-inline { width: 100%; }
+  .btn-filter-apply,
+  .btn-filter-reset { width: 100%; justify-content: center; }
+
+  /* Tables — horizontal scroll */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .visit-table { min-width: 600px; }
+  .visit-table th,
+  .visit-table td { padding: 10px 12px; font-size: 12px; }
+  .visit-table th { font-size: 9px; }
+
+  /* Modals */
+  .modal-card {
+    margin: 20px 16px;
+    padding: 28px 20px;
+    width: calc(100% - 32px);
+    max-width: 100%;
+  }
+  .modal-actions { flex-direction: column; gap: 8px; }
+  .modal-actions .btn-outline,
+  .modal-actions .btn-danger,
+  .modal-actions .btn-primary { width: 100%; justify-content: center; }
+
+  /* Toast */
+  .toast { left: 16px; right: 16px; bottom: 16px; text-align: center; }
+}
+
+/* ── SMALL PHONES (≤480px) ── */
+@media (max-width: 480px) {
+
+  /* Landing */
+  .landing-title { font-size: clamp(22px, 7vw, 34px); }
+  .landing-stats-card { flex-direction: column; align-items: center; gap: 14px; padding: 18px; }
+  .landing-stat-num { font-size: 36px; }
+
+  /* Stats — single column */
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Purpose grid — 2 columns still fine */
+  .purpose-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .purpose-btn { padding: 14px 8px; }
+
+  /* Role grid */
+  .role-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Login card tighter */
+  .login-card { padding: 28px 18px; margin: 16px 12px; width: calc(100% - 24px); }
+  .brand { font-size: 18px; }
+
+  /* Table even smaller */
+  .visit-table { min-width: 520px; }
+  .visit-table td { font-size: 11px; padding: 9px 10px; }
+  .visit-table th { font-size: 8px; padding: 9px 10px; }
+
+  /* Chart shorter */
+  .chart-wrap { height: 180px; }
+
+  /* Dash header single row */
+  .dash-title { font-size: 13px; }
+  .admin-badge span { display: none; } /* just show icon on tiny screens */
+}
