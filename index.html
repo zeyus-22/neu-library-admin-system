@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="theme-color" content="#0d0a07"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NEU Library — Visitor Log System</title>
   <link rel="stylesheet" href="style.css" />
   <meta name="google-signin-client_id" content="988706213326-0r902t1jsp5e6noo890dkimajq2hg25q.apps.googleusercontent.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 </head>
 <body>
@@ -299,7 +298,7 @@
       <button class="purpose-btn" data-purpose="Reading"><div class="purpose-icon"><i class="fas fa-book"></i></div><span>Reading</span></button>
       <button class="purpose-btn" data-purpose="Researching"><div class="purpose-icon"><i class="fas fa-magnifying-glass"></i></div><span>Researching</span></button>
       <button class="purpose-btn" data-purpose="Studying"><div class="purpose-icon"><i class="fas fa-graduation-cap"></i></div><span>Studying</span></button>
-      <button class="purpose-btn" data-purpose="Use of Computer"><div class="purpose-icon"><i class="fas fa-computer"></i></div><span>Use of Devices</span></button>
+      <button class="purpose-btn" data-purpose="Use of Computer"><div class="purpose-icon"><i class="fas fa-computer"></i></div><span>Use of Computer</span></button>
       <button class="purpose-btn" data-purpose="Group Study"><div class="purpose-icon"><i class="fas fa-users"></i></div><span>Group Study</span></button>
       <button class="purpose-btn" data-purpose="Other"><div class="purpose-icon"><i class="fas fa-ellipsis"></i></div><span>Other</span></button>
     </div>
@@ -354,7 +353,7 @@
       Sign in with Google
     </button>
     <div class="admin-link"><button id="btn-back-to-visitor" class="link-btn">← Visitor Login</button></div>
-    <div class="demo-hint"><i class="fas fa-circle-info"></i> Admin:  jcesperanza@neu.edu.ph</div>
+    <div class="demo-hint"><i class="fas fa-circle-info"></i> Admin: jcesperanza@neu.edu.ph</div>
   </div>
 </div>
 
@@ -499,13 +498,95 @@
     <section id="view-users" class="dash-view">
       <div class="table-wrap">
         <table class="visit-table">
-          <thead><tr><th>Name</th><th>Email / RFID</th><th>College</th><th>Total Visits</th><th>Last Visit</th><th>Status</th><th>Action</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email / RFID</th><th>College</th><th>Role</th><th>Total Visits</th><th>Last Visit</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="users-tbody"></tbody>
         </table>
         <div id="users-empty" class="empty-state hidden"><i class="fas fa-users"></i><p>No users found</p></div>
       </div>
     </section>
   </main>
+</div>
+
+
+<!-- Edit User Modal -->
+<div id="modal-edit-user" class="modal-overlay hidden">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-icon" style="background:rgba(79,142,247,0.12);color:#7ab4ff"><i class="fas fa-user-pen"></i></div>
+    <h3>Edit User</h3>
+    <div class="edit-form">
+      <input type="hidden" id="edit-user-id"/>
+      <div class="input-group">
+        <label>Full Name</label>
+        <div class="input-wrap"><i class="fas fa-user"></i>
+          <input type="text" id="edit-name" placeholder="Full name"/>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Email</label>
+        <div class="input-wrap"><i class="fas fa-envelope"></i>
+          <input type="email" id="edit-email" placeholder="email@neu.edu.ph"/>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>College</label>
+        <div class="input-wrap"><i class="fas fa-building"></i>
+          <select id="edit-college" class="program-select" style="padding-left:40px">
+            <option value="">— Select College —</option>
+            <option value="CAcc">College of Accountancy</option>
+            <option value="CAgri">College of Agriculture</option>
+            <option value="CAS">College of Arts and Sciences</option>
+            <option value="CBA">College of Business Administration</option>
+            <option value="CCom">College of Communication</option>
+            <option value="CCrim">College of Criminology</option>
+            <option value="CED">College of Education</option>
+            <option value="CEA">College of Engineering and Architecture</option>
+            <option value="CICS">College of Informatics and Computing Studies</option>
+            <option value="CMedTech">College of Medical Technology</option>
+            <option value="CMid">College of Midwifery</option>
+            <option value="CMus">College of Music</option>
+            <option value="CN">College of Nursing</option>
+            <option value="CPT">College of Physical Therapy</option>
+            <option value="CRT">College of Respiratory Therapy</option>
+            <option value="SIR">School of International Relations</option>
+            <option value="CL">College of Law</option>
+            <option value="CMed">College of Medicine</option>
+            <option value="SGS">School of Graduate Studies</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Saved Role</label>
+        <div class="input-wrap"><i class="fas fa-id-badge"></i>
+          <select id="edit-role" class="program-select" style="padding-left:40px">
+            <option value="">— Not set —</option>
+            <option value="Student">Student</option>
+            <option value="Employee">Employee</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Saved Program</label>
+        <div class="input-wrap"><i class="fas fa-graduation-cap"></i>
+          <input type="text" id="edit-program" placeholder="e.g. BSIT"/>
+        </div>
+      </div>
+      <!-- Admin toggle -->
+      <div class="admin-toggle-row">
+        <div>
+          <div class="admin-toggle-label"><i class="fas fa-shield-halved"></i> Grant Admin Access</div>
+          <div class="admin-toggle-sub">This user's email will be accepted on the Admin Login screen</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="edit-is-admin"/>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn-outline" id="modal-edit-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-edit-save" style="width:auto;padding:10px 24px"><span>Save Changes</span></button>
+    </div>
+  </div>
 </div>
 
 <!-- MODALS -->
@@ -543,9 +624,9 @@
 </div>
 
 <div id="toast" class="toast hidden"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="supabase-db.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>
 </html>
