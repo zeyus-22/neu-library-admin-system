@@ -13,7 +13,7 @@ let collegeChart = null;
 const CONFIG = {
   supabaseUrl: 'https://ydozugjlltfzcukykwec.supabase.co',
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlkb3p1Z2psbHRmemN1a3lrd2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzE1MDcsImV4cCI6MjA4ODEwNzUwN30.-24nkr7dy8evVEdXnX6aWkNT7ozK1GdCALfCUXl5WYQ',
-  adminEmail: 'jcesperanza@neu.edu.ph',
+  adminEmails: ['jcesperanza@neu.edu.ph'], // multiple admins supported
   googleClientId: '988706213326-0r902t1jsp5e6noo890dkimajq2hg25q.apps.googleusercontent.com',
   validDomains: ['neu.edu.ph', 'gmail.com'],
   colleges: [
@@ -125,14 +125,7 @@ const CONFIG = {
 // ── SUPABASE CLIENT ──────────────────────────────
 // ══════════════════════════════════════════════════
 
-let __supabaseClient = null;
-function getClient() {
-  if (!__supabaseClient) {
-    if (typeof supabase === 'undefined') throw new Error('Supabase SDK not loaded');
-    __supabaseClient = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
-  }
-  return __supabaseClient;
-}
+const _sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
 
 // ══════════════════════════════════════════════════
 // ── DB (Supabase) ────────────────────────────────
@@ -142,7 +135,7 @@ const DB = {
 
   async findUser(identifier) {
     const id = identifier.trim().toLowerCase();
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_users')
       .select('*')
       .or(`email.eq.${id},rfid.eq.${id}`)
@@ -154,7 +147,7 @@ const DB = {
   async searchUsers(query) {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_users')
       .select('id, name, email, rfid, college, blocked')
       .or(`name.ilike.%${q}%,email.ilike.%${q}%,rfid.ilike.%${q}%,college.ilike.%${q}%`)
@@ -171,17 +164,17 @@ const DB = {
       college: data.college || randomCollege(),
       blocked: false,
     };
-    const { data: user, error } = await getClient()
+    const { data: user, error } = await _sb
       .from('library_users').insert([payload]).select().single();
     if (error) { console.error('createUser:', error); return null; }
     return user;
   },
 
   async toggleBlock(userId) {
-    const { data: current, error: fetchErr } = await getClient()
+    const { data: current, error: fetchErr } = await _sb
       .from('library_users').select('blocked').eq('id', userId).single();
     if (fetchErr) { console.error('toggleBlock fetch:', fetchErr); return null; }
-    const { data: updated, error: updateErr } = await getClient()
+    const { data: updated, error: updateErr } = await _sb
       .from('library_users').update({ blocked: !current.blocked })
       .eq('id', userId).select().single();
     if (updateErr) { console.error('toggleBlock update:', updateErr); return null; }
@@ -189,7 +182,7 @@ const DB = {
   },
 
   async logVisit(userId, purpose, program, role) {
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_visits')
       .insert([{ user_id: userId, purpose, program: program || null, role: role || null }])
       .select().single();
@@ -201,10 +194,10 @@ const DB = {
     // Fetch visits and users in parallel, then merge client-side
     // This avoids RLS join issues entirely
     const [visitsRes, usersRes] = await Promise.all([
-      getClient().from('library_visits')
+      _sb.from('library_visits')
         .select('id, purpose, program, role, logged_at, user_id')
         .order('logged_at', { ascending: false }),
-      getClient().from('library_users')
+      _sb.from('library_users')
         .select('id, name, email, rfid, college, blocked')
     ]);
 
@@ -226,8 +219,20 @@ const DB = {
     }));
   },
 
+
+  async updateUser(userId, updates) {
+    const { data, error } = await _sb
+      .from('library_users')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) { console.error('updateUser:', error); return null; }
+    return data;
+  },
+
   async getUsers(search = '') {
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_users').select('*').order('created_at', { ascending: false });
     if (error) { console.error('getUsers:', error); return []; }
     if (!search) return data || [];
@@ -241,7 +246,7 @@ const DB = {
   },
 
   async getBlockedUsers() {
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_users').select('*').eq('blocked', true)
       .order('created_at', { ascending: false });
     if (error) { console.error('getBlockedUsers:', error); return []; }
@@ -249,7 +254,7 @@ const DB = {
   },
 
   async getVisitCountsPerUser() {
-    const { data, error } = await getClient().from('library_visits').select('user_id, logged_at');
+    const { data, error } = await _sb.from('library_visits').select('user_id, logged_at');
     if (error) { console.error('getVisitCountsPerUser:', error); return { counts: {}, lastVisit: {} }; }
     const counts = {}, lastVisit = {};
     (data || []).forEach(v => {
@@ -268,7 +273,7 @@ const DB = {
 async function signInWithGoogle(mode = 'visitor') {
   // mode: 'visitor' or 'admin'
   try {
-    const { data, error } = await getClient().auth.signInWithOAuth({
+    const { data, error } = await _sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.href,
@@ -298,11 +303,12 @@ async function handleAuthCallback() {
                           url.includes('error_description=');
 
   if (!isFreshRedirect) {
-    // No fresh redirect — just return false, don't touch auth state
+    // No fresh redirect — clear any stale session and go to landing
+    await _sb.auth.signOut().catch(() => {});
     return false;
   }
 
-  const { data: { session }, error } = await getClient().auth.getSession();
+  const { data: { session }, error } = await _sb.auth.getSession();
   if (!session || error) return false;
 
   // Clean the URL so refreshing doesn't re-trigger this
@@ -315,11 +321,11 @@ async function handleAuthCallback() {
 
   if (mode === 'admin') {
     // Admin path — check email matches
-    if (email?.toLowerCase() !== CONFIG.adminEmail.toLowerCase()) {
-      await getClient().auth.signOut();
+    if (!CONFIG.adminEmails.map(e => e.toLowerCase()).includes(email?.toLowerCase())) {
+      await _sb.auth.signOut();
       showScreen('admin-login');
       const err = document.getElementById('admin-login-error');
-      showError(err, `Access denied. Only ${CONFIG.adminEmail} can access the admin panel.`);
+      showError(err, 'Access denied. Your email is not registered as an admin.');
       return true;
     }
     state.adminLoggedIn = true;
@@ -333,7 +339,7 @@ async function handleAuthCallback() {
 
     // Validate domain
     if (!isValidInstitutionalEmail(email)) {
-      await getClient().auth.signOut();
+      await _sb.auth.signOut();
       showScreen('login');
       const err = document.getElementById('login-error');
       showError(err, 'Please use your institutional email (@neu.edu.ph or @gmail.com).');
@@ -359,9 +365,19 @@ async function handleAuthCallback() {
     }
 
     state.currentUser = user;
-    document.getElementById('role-greeting').textContent =
-      `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
-    showScreen('role');
+
+    // If user already has saved role & program, skip straight to purpose
+    if (user.saved_role) {
+      state.selectedRole    = user.saved_role;
+      state.selectedProgram = user.saved_program || null;
+      document.getElementById('purpose-greeting').textContent =
+        `Welcome back, ${user.name.split(' ')[0]}! What brings you to the library today?`;
+      showScreen('purpose');
+    } else {
+      document.getElementById('role-greeting').textContent =
+        `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
+      showScreen('role');
+    }
     return true;
   }
 }
@@ -720,7 +736,7 @@ async function handleLogin() {
   } else if (enteredName && enteredName.toLowerCase() !== user.name.toLowerCase()) {
     // Returning user updated their name — save it
     user.name = enteredName;
-    getClient().from('library_users')
+    _sb.from('library_users')
       .update({ name: enteredName })
       .eq('id', user.id)
       .then(({ error }) => { if (error) console.error('Name update error:', error); });
@@ -732,9 +748,19 @@ async function handleLogin() {
   if (user.blocked) { document.getElementById('modal-blocked').classList.remove('hidden'); return; }
 
   state.currentUser = user;
-  document.getElementById('role-greeting').textContent =
-    `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
-  showScreen('role');
+
+  // If user already has saved role & program, skip straight to purpose
+  if (user.saved_role) {
+    state.selectedRole    = user.saved_role;
+    state.selectedProgram = user.saved_program || null;
+    document.getElementById('purpose-greeting').textContent =
+      `Welcome back, ${user.name.split(' ')[0]}! What brings you to the library today?`;
+    showScreen('purpose');
+  } else {
+    document.getElementById('role-greeting').textContent =
+      `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
+    showScreen('role');
+  }
 }
 
 async function handlePurposeConfirm() {
@@ -791,6 +817,11 @@ function handleRoleSelect(role) {
       buildProgramGrid();
       showScreen('program');
     } else {
+      // Employee — save role immediately (no program)
+      if (state.currentUser) {
+        DB.updateUser(state.currentUser.id, { saved_role: role, saved_program: null })
+          .then(updated => { if (updated) state.currentUser = updated; });
+      }
       document.getElementById('purpose-greeting').textContent = `What brings you to the library today?`;
       showScreen('purpose');
     }
@@ -816,15 +847,21 @@ function buildProgramGrid() {
 function handleProgramConfirm() {
   if (!state.selectedProgram) return;
 
-  // Derive college from program and update user record if it differs
-  const derivedCollege = CONFIG.programCollegeMap[state.selectedProgram] || state.currentUser.college;
-  if (state.currentUser && derivedCollege !== state.currentUser.college) {
-    state.currentUser.college = derivedCollege;
-    // Update in Supabase silently
-    getClient().from('library_users')
-      .update({ college: derivedCollege })
-      .eq('id', state.currentUser.id)
-      .then(({ error }) => { if (error) console.error('College update error:', error); });
+  // Derive college from program
+  const derivedCollege = CONFIG.programCollegeMap[state.selectedProgram] || state.currentUser?.college;
+
+  // Save role, program, and college to user record
+  if (state.currentUser) {
+    const updates = {
+      saved_role:    state.selectedRole,
+      saved_program: state.selectedProgram,
+    };
+    if (derivedCollege && derivedCollege !== state.currentUser.college) {
+      updates.college = derivedCollege;
+      state.currentUser.college = derivedCollege;
+    }
+    DB.updateUser(state.currentUser.id, updates)
+      .then(updated => { if (updated) state.currentUser = updated; });
   }
 
   document.getElementById('purpose-greeting').textContent =
@@ -840,8 +877,8 @@ function handleAdminLogin() {
   const email = document.getElementById('admin-email').value.trim();
   const err = document.getElementById('admin-login-error');
   err.classList.add('hidden');
-  if (email.toLowerCase() !== CONFIG.adminEmail.toLowerCase()) {
-    return showError(err, 'Unrecognized admin email.');
+  if (!CONFIG.adminEmails.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
+    return showError(err, 'Unrecognized admin email. Contact the system administrator.');
   }
   state.adminLoggedIn = true;
   document.getElementById('admin-name-badge').textContent = email.split('@')[0];
@@ -853,8 +890,6 @@ function handleAdminLogout() {
   state.adminLoggedIn = false;
   document.getElementById('admin-email').value = '';
   showScreen('landing');
-  // Refresh landing stats immediately after logout
-  loadLandingStats();
 }
 
 // ══════════════════════════════════════════════════
@@ -955,95 +990,32 @@ async function renderOverview() {
   const canvas = document.getElementById('college-chart');
   if (canvas) {
     if (collegeChart) collegeChart.destroy();
-    // Build per-bar gold gradient
-    const ctx2d = canvas.getContext('2d');
-
-    // Elegant gradient per bar: deep crimson-to-gold
-    function makeBarGradient(ctx, chartArea, value, max) {
-      const grad = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-      grad.addColorStop(0,   'rgba(80, 20, 0, 0.85)');
-      grad.addColorStop(0.4, 'rgba(160, 40, 0, 0.9)');
-      grad.addColorStop(0.75,'rgba(201,120,30, 0.95)');
-      grad.addColorStop(1,   'rgba(232,196,100, 1)');
-      return grad;
-    }
-
-    const gradientPlugin = {
-      id: 'gradientBars',
-      beforeDatasetsDraw(chart) {
-        const { ctx, data, chartArea } = chart;
-        if (!chartArea) return;
-        chart.data.datasets[0].backgroundColor = data.datasets[0].data.map(() =>
-          makeBarGradient(ctx, chartArea)
-        );
-        chart.data.datasets[0].borderColor = data.datasets[0].data.map(() =>
-          'rgba(201,168,76,0.7)'
-        );
-      }
-    };
-
-    collegeChart = new Chart(ctx2d, {
+    collegeChart = new Chart(canvas.getContext('2d'), {
       type: 'bar',
-      plugins: [gradientPlugin],
       data: {
         labels: sorted.map(([k]) => k),
         datasets: [{
           label: 'Visits',
           data: sorted.map(([,v]) => v),
-          backgroundColor: 'rgba(201,168,76,0.6)', // placeholder, overridden by plugin
-          borderColor: 'rgba(201,168,76,0.6)',
-          borderWidth: 1,
-          borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
-          borderSkipped: 'bottom',
-          maxBarThickness: 48,
-          minBarLength: 4,
+          backgroundColor: sorted.map((_,i) => i%2===0 ? 'rgba(192,0,26,0.75)' : 'rgba(0,100,0,0.75)'),
+          borderColor:      sorted.map((_,i) => i%2===0 ? 'rgba(232,0,31,1)'   : 'rgba(0,160,0,1)'),
+          borderWidth: 1, borderRadius: 6, borderSkipped: false,
+          maxBarThickness: 52, minBarLength: 4,
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        animation: {
-          duration: 900,
-          easing: 'easeOutQuart',
-        },
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(17,14,8,0.95)',
-            borderColor: 'rgba(201,168,76,0.4)',
-            borderWidth: 1,
-            titleColor: '#e8c96a',
-            titleFont: { family: 'Cinzel, serif', size: 11, weight: '700' },
-            bodyColor: '#b89e72',
-            bodyFont: { family: 'EB Garamond, serif', size: 13 },
-            padding: 12,
-            cornerRadius: 3,
-            callbacks: {
-              title: items => items[0].label,
-              label: ctx => `  ${ctx.parsed.y} visit${ctx.parsed.y!==1?'s':''}`,
-            }
+            backgroundColor: '#1a1414', borderColor: 'rgba(192,0,26,0.4)', borderWidth: 1,
+            titleColor: '#f0eded', bodyColor: '#8a7e7e',
+            callbacks: { label: ctx => ` ${ctx.parsed.y} visit${ctx.parsed.y!==1?'s':''}` }
           }
         },
         scales: {
-          x: {
-            grid: { color: 'rgba(201,168,76,0.04)', lineWidth: 1 },
-            border: { color: 'rgba(201,168,76,0.2)' },
-            ticks: {
-              color: '#b89e72',
-              font: { family: 'Cinzel, serif', size: 10, weight: '600' },
-              maxRotation: 45,
-            }
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(201,168,76,0.06)', lineWidth: 1 },
-            border: { color: 'rgba(201,168,76,0.2)', dash: [4, 4] },
-            ticks: {
-              color: '#b89e72',
-              font: { family: 'Cinzel, serif', size: 10 },
-              stepSize: 1, precision: 0,
-              callback: val => val === 0 ? '' : val,
-            }
-          }
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a7e7e', font: { family: 'DM Sans', size: 11 } } },
+          y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a7e7e', font: { family: 'DM Sans', size: 11 }, stepSize: 1, precision: 0 } }
         }
       }
     });
@@ -1099,19 +1071,31 @@ async function renderUsers(query) {
   if (!users.length) { empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
   users.forEach(u => {
-    const count = visitCount[u.id] || 0;
-    const last  = lastVisit[u.id] ? formatDate(new Date(lastVisit[u.id])) : '—';
+    const count    = visitCount[u.id] || 0;
+    const last     = lastVisit[u.id] ? formatDate(new Date(lastVisit[u.id])) : '—';
+    const isAdmin  = CONFIG.adminEmails.map(e => e.toLowerCase()).includes(u.email?.toLowerCase());
     tbody.insertAdjacentHTML('beforeend', `
       <tr>
-        <td>${esc(u.name)}</td>
-        <td class="visit-email-cell">${esc(u.email||u.rfid||'—')}</td>
-        <td>${esc(u.college)}</td>
+        <td>
+          ${esc(u.name)}
+          ${isAdmin ? '<span class="admin-tag"><i class="fas fa-shield-halved"></i> Admin</span>' : ''}
+        </td>
+        <td style="color:var(--text-muted);font-size:12px">${esc(u.email||u.rfid||'—')}</td>
+        <td>${esc(u.college||'—')}</td>
+        <td>
+          ${u.saved_role
+            ? `<span class="role-pill ${u.saved_role.toLowerCase()}">${esc(u.saved_role)}</span>`
+            : '<span style="color:var(--text-dim)">—</span>'}
+        </td>
         <td style="font-family:var(--font-head);font-weight:700">${count}</td>
-        <td class="visit-time-cell">${last}</td>
+        <td style="color:var(--text-muted);font-size:12px">${last}</td>
         <td><span class="status-pill ${u.blocked?'blocked':'active'}">${u.blocked?'Blocked':'Active'}</span></td>
-        <td>${u.blocked
-          ? `<button class="action-btn unblock" data-id="${u.id}">Unblock</button>`
-          : `<button class="action-btn block"   data-id="${u.id}">Block</button>`}</td>
+        <td class="actions-cell">
+          <button class="action-btn edit" data-id="${u.id}"><i class="fas fa-pen"></i></button>
+          ${u.blocked
+            ? `<button class="action-btn unblock" data-id="${u.id}">Unblock</button>`
+            : `<button class="action-btn block"   data-id="${u.id}">Block</button>`}
+        </td>
       </tr>`);
   });
 }
@@ -1136,7 +1120,7 @@ async function renderBlocked(query) {
     tbody.insertAdjacentHTML('beforeend', `
       <tr>
         <td>${esc(u.name)}</td>
-        <td class="visit-email-cell">${esc(u.email||u.rfid||'—')}</td>
+        <td style="color:var(--text-muted);font-size:12px">${esc(u.email||u.rfid||'—')}</td>
         <td>${esc(u.college)}</td>
         <td style="font-family:var(--font-head);font-weight:700">${visitCount[u.id]||0}</td>
         <td><span class="status-pill blocked">Blocked</span></td>
@@ -1160,20 +1144,17 @@ function visitRow(v) {
   return `
     <tr>
       <td>${esc(u?.name||'—')}</td>
-      <td class="visit-email-cell">${esc(u?.email||u?.rfid||'—')}</td>
+      <td style="color:var(--text-muted);font-size:12px">${esc(u?.email||u?.rfid||'—')}</td>
       <td>${esc(getVisitCollege(v))}</td>
       <td>${v.role ? `<span class="role-pill ${v.role.toLowerCase()}">${esc(v.role)}</span>` : '—'}</td>
       <td>${esc(v.purpose)}</td>
-      <td class="visit-program-cell">${esc(v.program||'—')}</td>
-      <td class="visit-time-cell">${formatDate(d)} ${formatTime(d)}</td>
+      <td style="color:var(--text-muted);font-size:12px">${esc(v.program||'—')}</td>
+      <td style="color:var(--text-muted);font-size:12px">${formatDate(d)} ${formatTime(d)}</td>
       <td><span class="status-pill ${u?.blocked?'blocked':'active'}">${u?.blocked?'Blocked':'Active'}</span></td>
     </tr>`;
 }
 
 // ══════════════════════════════════════════════════
-
-document.addEventListener('DOMContentLoaded', function() {
-
 // ── BLOCK / UNBLOCK ──────────────────────────────
 // ══════════════════════════════════════════════════
 
@@ -1215,6 +1196,87 @@ document.getElementById('modal-unblock-cancel').addEventListener('click', () => 
 document.getElementById('modal-blocked-ok').addEventListener('click', () => {
   document.getElementById('modal-blocked').classList.add('hidden');
   resetToLogin();
+});
+
+
+// ══════════════════════════════════════════════════
+// ── EDIT USER MODAL ──────────────────────────────
+// ══════════════════════════════════════════════════
+
+document.addEventListener('click', e => {
+  const editBtn = e.target.closest('.action-btn.edit');
+  if (!editBtn) return;
+  openEditModal(editBtn.dataset.id);
+});
+
+async function openEditModal(userId) {
+  const users = await DB.getUsers();
+  const u = users.find(u => u.id === userId);
+  if (!u) return;
+
+  document.getElementById('edit-user-id').value  = u.id;
+  document.getElementById('edit-name').value      = u.name || '';
+  document.getElementById('edit-email').value     = u.email || '';
+  document.getElementById('edit-college').value   = u.college || '';
+  document.getElementById('edit-role').value      = u.saved_role || '';
+  document.getElementById('edit-program').value   = u.saved_program || '';
+  document.getElementById('edit-is-admin').checked =
+    CONFIG.adminEmails.map(e => e.toLowerCase()).includes(u.email?.toLowerCase());
+
+  document.getElementById('modal-edit-user').classList.remove('hidden');
+}
+
+document.getElementById('modal-edit-cancel')?.addEventListener('click', () => {
+  document.getElementById('modal-edit-user').classList.add('hidden');
+});
+
+document.getElementById('modal-edit-save')?.addEventListener('click', async () => {
+  const userId     = document.getElementById('edit-user-id').value;
+  const name       = document.getElementById('edit-name').value.trim();
+  const email      = document.getElementById('edit-email').value.trim();
+  const college    = document.getElementById('edit-college').value;
+  const savedRole  = document.getElementById('edit-role').value;
+  const savedProg  = document.getElementById('edit-program').value.trim();
+  const makeAdmin  = document.getElementById('edit-is-admin').checked;
+
+  if (!name) { showToast('Name is required.', 'error'); return; }
+
+  const btn = document.getElementById('modal-edit-save');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'Saving…';
+
+  const updates = {
+    name,
+    email:         email || null,
+    college:       college || null,
+    saved_role:    savedRole || null,
+    saved_program: savedProg || null,
+  };
+
+  const updated = await DB.updateUser(userId, updates);
+
+  // Handle admin toggle
+  if (email) {
+    const emailLower = email.toLowerCase();
+    const alreadyAdmin = CONFIG.adminEmails.map(e => e.toLowerCase()).includes(emailLower);
+    if (makeAdmin && !alreadyAdmin) {
+      CONFIG.adminEmails.push(email);
+    } else if (!makeAdmin && alreadyAdmin) {
+      CONFIG.adminEmails = CONFIG.adminEmails.filter(e => e.toLowerCase() !== emailLower);
+    }
+  }
+
+  btn.disabled = false;
+  btn.querySelector('span').textContent = 'Save Changes';
+  document.getElementById('modal-edit-user').classList.add('hidden');
+
+  if (updated) {
+    state.allVisits = []; // invalidate cache
+    renderView(state.currentView);
+    showToast(`${name}'s profile updated.`, 'success');
+  } else {
+    showToast('Failed to save changes.', 'error');
+  }
 });
 
 // ══════════════════════════════════════════════════
@@ -1297,8 +1359,6 @@ document.getElementById('btn-welcome-done').addEventListener('click', () => {
 document.getElementById('btn-admin-submit').addEventListener('click', handleAdminLogin);
 document.getElementById('admin-email').addEventListener('keydown', e => { if (e.key==='Enter') handleAdminLogin(); });
 document.getElementById('btn-back-to-visitor').addEventListener('click', () => showScreen('login'));
-// ← Admin Login link inside visitor login card
-document.getElementById('btn-admin-login')?.addEventListener('click', () => showScreen('admin-login'));
 document.getElementById('btn-admin-logout').addEventListener('click', handleAdminLogout);
 
 // Sidebar nav
@@ -1367,34 +1427,6 @@ document.getElementById('btn-reset-filter')?.addEventListener('click', () => {
 document.getElementById('btn-google-visitor')?.addEventListener('click', () => signInWithGoogle('visitor'));
 document.getElementById('btn-google-admin')?.addEventListener('click',   () => signInWithGoogle('admin'));
 
-
-// ══════════════════════════════════════════════════
-// ── AUTO-REFRESH (every 5 seconds) ───────────────
-// ══════════════════════════════════════════════════
-
-let autoRefreshInterval = null;
-
-function startAutoRefresh() {
-  stopAutoRefresh(); // clear any existing
-  autoRefreshInterval = setInterval(async () => {
-    // Only refresh if on the landing screen or admin dashboard
-    if (state.currentScreen === 'landing') {
-      await loadLandingStats();
-    } else if (state.currentScreen === 'dashboard') {
-      // Invalidate cache so fresh data is fetched
-      state.allVisits = [];
-      await renderView(state.currentView);
-    }
-  }, 5000);
-}
-
-function stopAutoRefresh() {
-  if (autoRefreshInterval) {
-    clearInterval(autoRefreshInterval);
-    autoRefreshInterval = null;
-  }
-}
-
 // ══════════════════════════════════════════════════
 // ── INIT ─────────────────────────────────────────
 // ══════════════════════════════════════════════════
@@ -1402,7 +1434,6 @@ function stopAutoRefresh() {
 startClock();
 loadLandingStats();
 initQuotes();
-startAutoRefresh();
 
 // Check if returning from Google OAuth redirect
 handleAuthCallback().then(wasCallback => {
@@ -1410,5 +1441,3 @@ handleAuthCallback().then(wasCallback => {
     showScreen('landing');
   }
 });
-
-}); // end DOMContentLoaded
