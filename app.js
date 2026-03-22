@@ -142,13 +142,24 @@ const DB = {
 
   async findUser(identifier) {
     const id = identifier.trim().toLowerCase();
-    const { data, error } = await getClient()
+
+    // Try email first
+    const { data: byEmail, error: emailErr } = await getClient()
       .from('library_users')
       .select('*')
-      .or(`email.eq.${id},rfid.eq.${id}`)
+      .eq('email', id)
       .maybeSingle();
-    if (error) { console.error('findUser:', error); return null; }
-    return data;
+    if (emailErr) console.error('findUser (email):', emailErr);
+    if (byEmail) return byEmail;
+
+    // Then try RFID
+    const { data: byRfid, error: rfidErr } = await getClient()
+      .from('library_users')
+      .select('*')
+      .eq('rfid', id)
+      .maybeSingle();
+    if (rfidErr) console.error('findUser (rfid):', rfidErr);
+    return byRfid || null;
   },
 
   async searchUsers(query) {
@@ -502,7 +513,12 @@ function randomCollege() {
 function extractNameFromEmail(email) {
   if (!email) return 'Visitor';
   const local = email.split('@')[0];
-  return local.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+  // Split on dots, underscores, hyphens and numbers to get name parts
+  return local
+    .split(/[._\-0-9]+/)
+    .filter(Boolean)
+    .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
+    .join(' ') || 'Visitor';
 }
 function showError(el, msg) { el.textContent = msg; el.classList.remove('hidden'); }
 function showToast(msg, type = 'success') {
@@ -745,7 +761,11 @@ async function handleLogin() {
   let user = await DB.findUser(identifier);
 
   if (!user) {
-    // New user — create with entered name
+    // Double-check before creating — retry findUser once to avoid race duplicates
+    user = await DB.findUser(identifier);
+  }
+  if (!user) {
+    // Confirmed new user — create with entered name
     const data = state.activeTab === 'email'
       ? { email: identifier, name: enteredName }
       : { rfid: identifier,  name: enteredName };
