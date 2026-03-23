@@ -388,7 +388,15 @@ async function handleAuthCallback() {
 
     let user = await DB.findUser(email);
     if (!user) {
+      // Brand new user — create with Google name
       user = await DB.createUser({ email, name });
+    } else if (name && name !== extractNameFromEmail(email) && user.name !== name) {
+      // Returning user — update their name from Google if it's a real name
+      user.name = name;
+      getClient().from('library_users')
+        .update({ name })
+        .eq('id', user.id)
+        .then(({ error }) => { if (error) console.error('Name sync error:', error); });
     }
     showLoading(false);
 
@@ -402,6 +410,21 @@ async function handleAuthCallback() {
     }
 
     state.currentUser = user;
+
+    // ── Returning user shortcut (same logic as handleLogin) ──
+    console.log('Google auth — role:', user.role, '| program:', user.program);
+    const hasRole    = user.role === 'Employee' || user.role === 'Student';
+    const hasProgram = user.role === 'Employee' || !!user.program;
+    if (hasRole && hasProgram) {
+      state.selectedRole    = user.role;
+      state.selectedProgram = user.program || null;
+      const firstName = user.name.split(' ')[0];
+      document.getElementById('purpose-greeting').textContent =
+        `Welcome back, ${firstName}! What brings you in today?`;
+      showScreen('purpose');
+      return true;
+    }
+
     document.getElementById('role-greeting').textContent =
       `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
     showScreen('role');
