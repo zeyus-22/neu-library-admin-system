@@ -356,80 +356,93 @@ async function handleAuthCallback() {
   const mode  = sessionStorage.getItem('neu_auth_mode') || 'visitor';
   sessionStorage.removeItem('neu_auth_mode');
 
-  if (mode === 'admin') {
-    // Admin path — check email matches
-    if (email?.toLowerCase() !== CONFIG.adminEmail.toLowerCase()) {
-      await getClient().auth.signOut();
-      showScreen('admin-login');
-      const err = document.getElementById('admin-login-error');
-      showError(err, `Access denied. Only ${CONFIG.adminEmail} can access the admin panel.`);
-      return true;
-    }
+  // ── Helper: check if this email is any kind of admin ──
+  async function isAdminEmail(emailToCheck) {
+    if (emailToCheck.toLowerCase() === CONFIG.adminEmail.toLowerCase()) return true;
+    const adminUsers = await DB.getAdminEmails();
+    return adminUsers.some(u => u.email?.toLowerCase() === emailToCheck.toLowerCase());
+  }
+
+  // ── Always check if the signing-in user is an admin,
+  //    regardless of which Google button they clicked ──
+  const emailIsAdmin = await isAdminEmail(email);
+
+  if (emailIsAdmin) {
+    // ── ADMIN PATH ──
     state.adminLoggedIn = true;
     document.getElementById('admin-name-badge').textContent = name.split(' ')[0];
     showScreen('dashboard');
     showDashView('overview');
     return true;
-  } else {
-    // Visitor path
-    if (!email) return false;
+  }
 
-    // Validate domain
-    if (!isValidInstitutionalEmail(email)) {
-      await getClient().auth.signOut();
-      showScreen('login');
-      const err = document.getElementById('login-error');
-      showError(err, 'Please use your institutional email (@neu.edu.ph or @gmail.com).');
-      return true;
-    }
+  // ── VISITOR PATH ──
+  if (!email) return false;
 
+  // Validate domain
+  if (!isValidInstitutionalEmail(email)) {
+    await getClient().auth.signOut();
     showScreen('login');
-    showLoading(true);
-
-    let user = await DB.findUser(email);
-    if (!user) {
-      // Brand new user — create with Google name
-      user = await DB.createUser({ email, name });
-    } else if (name && name !== extractNameFromEmail(email) && user.name !== name) {
-      // Returning user — update their name from Google if it's a real name
-      user.name = name;
-      getClient().from('library_users')
-        .update({ name })
-        .eq('id', user.id)
-        .then(({ error }) => { if (error) console.error('Name sync error:', error); });
-    }
-    showLoading(false);
-
-    if (!user) {
-      showError(document.getElementById('login-error'), 'Something went wrong. Please try again.');
-      return true;
-    }
-    if (user.blocked) {
-      document.getElementById('modal-blocked').classList.remove('hidden');
-      return true;
-    }
-
-    state.currentUser = user;
-
-    // ── Returning user shortcut (same logic as handleLogin) ──
-    console.log('Google auth — role:', user.role, '| program:', user.program);
-    const hasRole    = user.role === 'Employee' || user.role === 'Student';
-    const hasProgram = user.role === 'Employee' || !!user.program;
-    if (hasRole && hasProgram) {
-      state.selectedRole    = user.role;
-      state.selectedProgram = user.program || null;
-      const firstName = user.name.split(' ')[0];
-      document.getElementById('purpose-greeting').textContent =
-        `Welcome back, ${firstName}! What brings you in today?`;
-      showScreen('purpose');
-      return true;
-    }
-
-    document.getElementById('role-greeting').textContent =
-      `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
-    showScreen('role');
+    const err = document.getElementById('login-error');
+    showError(err, 'Please use your institutional email (@neu.edu.ph or @gmail.com).');
     return true;
   }
+
+  // If they came from the admin login screen but aren't an admin, redirect back with error
+  if (mode === 'admin') {
+    await getClient().auth.signOut();
+    showScreen('admin-login');
+    const err = document.getElementById('admin-login-error');
+    showError(err, `Access denied. ${email} is not an admin account.`);
+    return true;
+  }
+
+  showScreen('login');
+  showLoading(true);
+
+  let user = await DB.findUser(email);
+  if (!user) {
+    // Brand new user — create with Google name
+    user = await DB.createUser({ email, name });
+  } else if (name && name !== extractNameFromEmail(email) && user.name !== name) {
+    // Returning user — update their name from Google if it's a real name
+    user.name = name;
+    getClient().from('library_users')
+      .update({ name })
+      .eq('id', user.id)
+      .then(({ error }) => { if (error) console.error('Name sync error:', error); });
+  }
+  showLoading(false);
+
+  if (!user) {
+    showError(document.getElementById('login-error'), 'Something went wrong. Please try again.');
+    return true;
+  }
+  if (user.blocked) {
+    document.getElementById('modal-blocked').classList.remove('hidden');
+    return true;
+  }
+
+  state.currentUser = user;
+
+  // ── Returning user shortcut ──
+  console.log('Google auth — role:', user.role, '| program:', user.program);
+  const hasRole    = user.role === 'Employee' || user.role === 'Student';
+  const hasProgram = user.role === 'Employee' || !!user.program;
+  if (hasRole && hasProgram) {
+    state.selectedRole    = user.role;
+    state.selectedProgram = user.program || null;
+    const firstName = user.name.split(' ')[0];
+    document.getElementById('purpose-greeting').textContent =
+      `Welcome back, ${firstName}! What brings you in today?`;
+    showScreen('purpose');
+    return true;
+  }
+
+  document.getElementById('role-greeting').textContent =
+    `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
+  showScreen('role');
+  return true;
 }
 
 
