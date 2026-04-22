@@ -13,7 +13,7 @@ let collegeChart = null;
 const CONFIG = {
   supabaseUrl: 'https://ydozugjlltfzcukykwec.supabase.co',
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlkb3p1Z2psbHRmemN1a3lrd2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzE1MDcsImV4cCI6MjA4ODEwNzUwN30.-24nkr7dy8evVEdXnX6aWkNT7ozK1GdCALfCUXl5WYQ',
-  adminEmails: ['jcesperanza@neu.edu.ph'], // multiple admins supported
+  adminEmails: ['jcesperanza@neu.edu.ph'], // seed — overwritten by loadAdminEmails()
   googleClientId: '988706213326-0r902t1jsp5e6noo890dkimajq2hg25q.apps.googleusercontent.com',
   validDomains: ['neu.edu.ph', 'gmail.com'],
   colleges: [
@@ -219,6 +219,37 @@ const DB = {
     }));
   },
 
+
+
+  async loadAdminEmails() {
+    const { data, error } = await _sb
+      .from('library_users')
+      .select('email')
+      .eq('is_admin', true);
+    if (error) { console.error('loadAdminEmails:', error); return; }
+    const fromDb = (data || []).map(u => u.email).filter(Boolean);
+    // Merge with hardcoded seeds, deduplicate
+    const all = [...new Set([...CONFIG.adminEmails, ...fromDb])];
+    CONFIG.adminEmails = all;
+  },
+
+  async setAdminStatus(userId, isAdmin) {
+    const { data, error } = await _sb
+      .from('library_users')
+      .update({ is_admin: isAdmin })
+      .eq('id', userId)
+      .select('email')
+      .single();
+    if (error) { console.error('setAdminStatus:', error); return; }
+    // Sync CONFIG.adminEmails
+    const email = data?.email;
+    if (!email) return;
+    if (isAdmin && !CONFIG.adminEmails.map(e=>e.toLowerCase()).includes(email.toLowerCase())) {
+      CONFIG.adminEmails.push(email);
+    } else if (!isAdmin) {
+      CONFIG.adminEmails = CONFIG.adminEmails.filter(e => e.toLowerCase() !== email.toLowerCase());
+    }
+  },
 
   async updateUser(userId, updates) {
     const { data, error } = await _sb
@@ -1213,8 +1244,7 @@ async function openEditModal(userId) {
   document.getElementById('edit-college').value   = u.college || '';
   document.getElementById('edit-role').value      = u.saved_role || '';
   document.getElementById('edit-program').value   = u.saved_program || '';
-  document.getElementById('edit-is-admin').checked =
-    CONFIG.adminEmails.map(e => e.toLowerCase()).includes(u.email?.toLowerCase());
+  document.getElementById('edit-is-admin').checked = u.is_admin === true;
 
   document.getElementById('modal-edit-user').classList.remove('hidden');
 }
@@ -1248,16 +1278,10 @@ document.getElementById('modal-edit-save')?.addEventListener('click', async () =
 
   const updated = await DB.updateUser(userId, updates);
 
-  // Handle admin toggle
-  if (email) {
-    const emailLower = email.toLowerCase();
-    const alreadyAdmin = CONFIG.adminEmails.map(e => e.toLowerCase()).includes(emailLower);
-    if (makeAdmin && !alreadyAdmin) {
-      CONFIG.adminEmails.push(email);
-    } else if (!makeAdmin && alreadyAdmin) {
-      CONFIG.adminEmails = CONFIG.adminEmails.filter(e => e.toLowerCase() !== emailLower);
-    }
-  }
+  // Handle admin toggle — save to Supabase so it persists
+  await DB.setAdminStatus(userId, makeAdmin);
+  // Also include is_admin in the user update
+  updates.is_admin = makeAdmin;
 
   btn.disabled = false;
   btn.querySelector('span').textContent = 'Save Changes';
@@ -1425,8 +1449,11 @@ document.getElementById('btn-google-admin')?.addEventListener('click',   () => s
 // ══════════════════════════════════════════════════
 
 startClock();
-loadLandingStats();
 initQuotes();
+// Load admin emails from DB then show landing
+DB.loadAdminEmails().then(() => {
+  loadLandingStats();
+});
 
 // Check if returning from Google OAuth redirect
 handleAuthCallback().then(wasCallback => {
