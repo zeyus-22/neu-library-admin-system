@@ -983,7 +983,6 @@ async function handleAdminLogin() {
   btn.disabled = true;
   btn.querySelector('span').textContent = 'Checking…';
 
-  // Check hardcoded admin OR dynamic admins in DB
   let isAdmin = email === CONFIG.adminEmail.toLowerCase();
   if (!isAdmin) {
     const adminUsers = await DB.getAdminEmails();
@@ -995,10 +994,8 @@ async function handleAdminLogin() {
 
   if (!isAdmin) return showError(err, 'Unrecognized admin email.');
 
-  state.adminLoggedIn = true;
-  document.getElementById('admin-name-badge').textContent = email.split('@')[0];
-  showScreen('dashboard');
-  showDashView('overview');
+  // ── Instead of skipping auth, send them through Google OAuth ──
+  await signInWithGoogle('admin');
 }
 
 function handleAdminLogout() {
