@@ -13,7 +13,7 @@ let collegeChart = null;
 const CONFIG = {
   supabaseUrl: 'https://ydozugjlltfzcukykwec.supabase.co',
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlkb3p1Z2psbHRmemN1a3lrd2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MzE1MDcsImV4cCI6MjA4ODEwNzUwN30.-24nkr7dy8evVEdXnX6aWkNT7ozK1GdCALfCUXl5WYQ',
-  adminEmail: 'jcesperanza@neu.edu.ph',
+  adminEmails: ['jcesperanza@neu.edu.ph'], // multiple admins supported
   googleClientId: '988706213326-0r902t1jsp5e6noo890dkimajq2hg25q.apps.googleusercontent.com',
   validDomains: ['neu.edu.ph', 'gmail.com'],
   colleges: [
@@ -125,14 +125,7 @@ const CONFIG = {
 // ── SUPABASE CLIENT ──────────────────────────────
 // ══════════════════════════════════════════════════
 
-let __supabaseClient = null;
-function getClient() {
-  if (!__supabaseClient) {
-    if (typeof supabase === 'undefined') throw new Error('Supabase SDK not loaded');
-    __supabaseClient = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
-  }
-  return __supabaseClient;
-}
+const _sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
 
 // ══════════════════════════════════════════════════
 // ── DB (Supabase) ────────────────────────────────
@@ -142,30 +135,19 @@ const DB = {
 
   async findUser(identifier) {
     const id = identifier.trim().toLowerCase();
-
-    // Try email first
-    const { data: byEmail, error: emailErr } = await getClient()
+    const { data, error } = await _sb
       .from('library_users')
       .select('*')
-      .eq('email', id)
+      .or(`email.eq.${id},rfid.eq.${id}`)
       .maybeSingle();
-    if (emailErr) console.error('findUser (email):', emailErr);
-    if (byEmail) return byEmail;
-
-    // Then try RFID
-    const { data: byRfid, error: rfidErr } = await getClient()
-      .from('library_users')
-      .select('*')
-      .eq('rfid', id)
-      .maybeSingle();
-    if (rfidErr) console.error('findUser (rfid):', rfidErr);
-    return byRfid || null;
+    if (error) { console.error('findUser:', error); return null; }
+    return data;
   },
 
   async searchUsers(query) {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_users')
       .select('id, name, email, rfid, college, blocked')
       .or(`name.ilike.%${q}%,email.ilike.%${q}%,rfid.ilike.%${q}%,college.ilike.%${q}%`)
@@ -182,17 +164,17 @@ const DB = {
       college: data.college || randomCollege(),
       blocked: false,
     };
-    const { data: user, error } = await getClient()
+    const { data: user, error } = await _sb
       .from('library_users').insert([payload]).select().single();
     if (error) { console.error('createUser:', error); return null; }
     return user;
   },
 
   async toggleBlock(userId) {
-    const { data: current, error: fetchErr } = await getClient()
+    const { data: current, error: fetchErr } = await _sb
       .from('library_users').select('blocked').eq('id', userId).single();
     if (fetchErr) { console.error('toggleBlock fetch:', fetchErr); return null; }
-    const { data: updated, error: updateErr } = await getClient()
+    const { data: updated, error: updateErr } = await _sb
       .from('library_users').update({ blocked: !current.blocked })
       .eq('id', userId).select().single();
     if (updateErr) { console.error('toggleBlock update:', updateErr); return null; }
@@ -200,7 +182,7 @@ const DB = {
   },
 
   async logVisit(userId, purpose, program, role) {
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_visits')
       .insert([{ user_id: userId, purpose, program: program || null, role: role || null }])
       .select().single();
@@ -212,10 +194,10 @@ const DB = {
     // Fetch visits and users in parallel, then merge client-side
     // This avoids RLS join issues entirely
     const [visitsRes, usersRes] = await Promise.all([
-      getClient().from('library_visits')
+      _sb.from('library_visits')
         .select('id, purpose, program, role, logged_at, user_id')
         .order('logged_at', { ascending: false }),
-      getClient().from('library_users')
+      _sb.from('library_users')
         .select('id, name, email, rfid, college, blocked')
     ]);
 
@@ -237,8 +219,20 @@ const DB = {
     }));
   },
 
+
+  async updateUser(userId, updates) {
+    const { data, error } = await _sb
+      .from('library_users')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) { console.error('updateUser:', error); return null; }
+    return data;
+  },
+
   async getUsers(search = '') {
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_users').select('*').order('created_at', { ascending: false });
     if (error) { console.error('getUsers:', error); return []; }
     if (!search) return data || [];
@@ -252,47 +246,15 @@ const DB = {
   },
 
   async getBlockedUsers() {
-    const { data, error } = await getClient()
+    const { data, error } = await _sb
       .from('library_users').select('*').eq('blocked', true)
       .order('created_at', { ascending: false });
     if (error) { console.error('getBlockedUsers:', error); return []; }
     return data || [];
   },
 
-  async updateUser(userId, fields) {
-    const { data, error } = await getClient()
-      .from('library_users')
-      .update(fields)
-      .eq('id', userId)
-      .select()
-      .single();
-    if (error) { console.error('updateUser:', error); return null; }
-    return data;
-  },
-
-  async getAdminEmails() {
-    // We store extra admins in library_users with is_admin = true
-    const { data, error } = await getClient()
-      .from('library_users')
-      .select('id, name, email')
-      .eq('is_admin', true);
-    if (error) { console.error('getAdminEmails:', error); return []; }
-    return data || [];
-  },
-
-  async setAdminStatus(userId, isAdmin) {
-    const { data, error } = await getClient()
-      .from('library_users')
-      .update({ is_admin: isAdmin })
-      .eq('id', userId)
-      .select()
-      .single();
-    if (error) { console.error('setAdminStatus:', error); return null; }
-    return data;
-  },
-
   async getVisitCountsPerUser() {
-    const { data, error } = await getClient().from('library_visits').select('user_id, logged_at');
+    const { data, error } = await _sb.from('library_visits').select('user_id, logged_at');
     if (error) { console.error('getVisitCountsPerUser:', error); return { counts: {}, lastVisit: {} }; }
     const counts = {}, lastVisit = {};
     (data || []).forEach(v => {
@@ -311,7 +273,7 @@ const DB = {
 async function signInWithGoogle(mode = 'visitor') {
   // mode: 'visitor' or 'admin'
   try {
-    const { data, error } = await getClient().auth.signInWithOAuth({
+    const { data, error } = await _sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.href,
@@ -341,11 +303,12 @@ async function handleAuthCallback() {
                           url.includes('error_description=');
 
   if (!isFreshRedirect) {
-    // No fresh redirect — just return false, don't touch auth state
+    // No fresh redirect — clear any stale session and go to landing
+    await _sb.auth.signOut().catch(() => {});
     return false;
   }
 
-  const { data: { session }, error } = await getClient().auth.getSession();
+  const { data: { session }, error } = await _sb.auth.getSession();
   if (!session || error) return false;
 
   // Clean the URL so refreshing doesn't re-trigger this
@@ -353,22 +316,11 @@ async function handleAuthCallback() {
 
   const email = session.user?.email;
   const name  = session.user?.user_metadata?.full_name || extractNameFromEmail(email);
-  const mode  = sessionStorage.getItem('neu_auth_mode') || 'visitor';
   sessionStorage.removeItem('neu_auth_mode');
 
-  // ── Helper: check if this email is any kind of admin ──
-  async function isAdminEmail(emailToCheck) {
-    if (emailToCheck.toLowerCase() === CONFIG.adminEmail.toLowerCase()) return true;
-    const adminUsers = await DB.getAdminEmails();
-    return adminUsers.some(u => u.email?.toLowerCase() === emailToCheck.toLowerCase());
-  }
-
-  // ── Always check if the signing-in user is an admin,
-  //    regardless of which Google button they clicked ──
-  const emailIsAdmin = await isAdminEmail(email);
-
-  if (emailIsAdmin) {
-    // ── ADMIN PATH ──
+  // ── Admin check first — regardless of which button was clicked ──
+  // If the signed-in Google email is a registered admin, go straight to dashboard
+  if (email && CONFIG.adminEmails.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
     state.adminLoggedIn = true;
     document.getElementById('admin-name-badge').textContent = name.split(' ')[0];
     showScreen('dashboard');
@@ -376,24 +328,15 @@ async function handleAuthCallback() {
     return true;
   }
 
-  // ── VISITOR PATH ──
+  // ── Visitor path ──
   if (!email) return false;
 
   // Validate domain
   if (!isValidInstitutionalEmail(email)) {
-    await getClient().auth.signOut();
+    await _sb.auth.signOut();
     showScreen('login');
     const err = document.getElementById('login-error');
     showError(err, 'Please use your institutional email (@neu.edu.ph or @gmail.com).');
-    return true;
-  }
-
-  // If they came from the admin login screen but aren't an admin, redirect back with error
-  if (mode === 'admin') {
-    await getClient().auth.signOut();
-    showScreen('admin-login');
-    const err = document.getElementById('admin-login-error');
-    showError(err, `Access denied. ${email} is not an admin account.`);
     return true;
   }
 
@@ -402,15 +345,7 @@ async function handleAuthCallback() {
 
   let user = await DB.findUser(email);
   if (!user) {
-    // Brand new user — create with Google name
     user = await DB.createUser({ email, name });
-  } else if (name && name !== extractNameFromEmail(email) && user.name !== name) {
-    // Returning user — update their name from Google if it's a real name
-    user.name = name;
-    getClient().from('library_users')
-      .update({ name })
-      .eq('id', user.id)
-      .then(({ error }) => { if (error) console.error('Name sync error:', error); });
   }
   showLoading(false);
 
@@ -425,23 +360,18 @@ async function handleAuthCallback() {
 
   state.currentUser = user;
 
-  // ── Returning user shortcut ──
-  console.log('Google auth — role:', user.role, '| program:', user.program);
-  const hasRole    = user.role === 'Employee' || user.role === 'Student';
-  const hasProgram = user.role === 'Employee' || !!user.program;
-  if (hasRole && hasProgram) {
-    state.selectedRole    = user.role;
-    state.selectedProgram = user.program || null;
-    const firstName = user.name.split(' ')[0];
+  // If user already has saved role & program, skip straight to purpose
+  if (user.saved_role) {
+    state.selectedRole    = user.saved_role;
+    state.selectedProgram = user.saved_program || null;
     document.getElementById('purpose-greeting').textContent =
-      `Welcome back, ${firstName}! What brings you in today?`;
+      `Welcome back, ${user.name.split(' ')[0]}! What brings you to the library today?`;
     showScreen('purpose');
-    return true;
+  } else {
+    document.getElementById('role-greeting').textContent =
+      `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
+    showScreen('role');
   }
-
-  document.getElementById('role-greeting').textContent =
-    `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
-  showScreen('role');
   return true;
 }
 
@@ -532,7 +462,6 @@ let state = {
   adminLoggedIn: false,
   pendingBlockId: null,
   pendingUnblockId: null,
-  editingUserId: null,
   welcomeTimer: null,
   currentView: 'overview',
   activeQuickFilter: 'all',
@@ -549,12 +478,7 @@ function randomCollege() {
 function extractNameFromEmail(email) {
   if (!email) return 'Visitor';
   const local = email.split('@')[0];
-  // Split on dots, underscores, hyphens and numbers to get name parts
-  return local
-    .split(/[._\-0-9]+/)
-    .filter(Boolean)
-    .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
-    .join(' ') || 'Visitor';
+  return local.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
 }
 function showError(el, msg) { el.textContent = msg; el.classList.remove('hidden'); }
 function showToast(msg, type = 'success') {
@@ -797,11 +721,7 @@ async function handleLogin() {
   let user = await DB.findUser(identifier);
 
   if (!user) {
-    // Double-check before creating — retry findUser once to avoid race duplicates
-    user = await DB.findUser(identifier);
-  }
-  if (!user) {
-    // Confirmed new user — create with entered name
+    // New user — create with entered name
     const data = state.activeTab === 'email'
       ? { email: identifier, name: enteredName }
       : { rfid: identifier,  name: enteredName };
@@ -809,7 +729,7 @@ async function handleLogin() {
   } else if (enteredName && enteredName.toLowerCase() !== user.name.toLowerCase()) {
     // Returning user updated their name — save it
     user.name = enteredName;
-    getClient().from('library_users')
+    _sb.from('library_users')
       .update({ name: enteredName })
       .eq('id', user.id)
       .then(({ error }) => { if (error) console.error('Name update error:', error); });
@@ -822,27 +742,18 @@ async function handleLogin() {
 
   state.currentUser = user;
 
-  // ── Returning user shortcut ──
-  // Debug: log what we got from DB
-  console.log('User loaded — role:', user.role, '| program:', user.program);
-
-  // If we already know their role, and either they're an Employee
-  // OR they're a Student with a saved program → skip to purpose
-  const hasRole    = user.role === 'Employee' || user.role === 'Student';
-  const hasProgram = user.role === 'Employee' || !!user.program;
-  if (hasRole && hasProgram) {
-    state.selectedRole    = user.role;
-    state.selectedProgram = user.program || null;
-    const firstName = user.name.split(' ')[0];
+  // If user already has saved role & program, skip straight to purpose
+  if (user.saved_role) {
+    state.selectedRole    = user.saved_role;
+    state.selectedProgram = user.saved_program || null;
     document.getElementById('purpose-greeting').textContent =
-      `Welcome back, ${firstName}! What brings you in today?`;
+      `Welcome back, ${user.name.split(' ')[0]}! What brings you to the library today?`;
     showScreen('purpose');
-    return;
+  } else {
+    document.getElementById('role-greeting').textContent =
+      `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
+    showScreen('role');
   }
-
-  document.getElementById('role-greeting').textContent =
-    `Hello, ${user.name.split(' ')[0]}! Please select your role.`;
-  showScreen('role');
 }
 
 async function handlePurposeConfirm() {
@@ -890,34 +801,24 @@ function resetToLogin() {
 // ── ROLE SCREEN ──────────────────────────────────
 // ══════════════════════════════════════════════════
 
-async function handleRoleSelect(role) {
+function handleRoleSelect(role) {
   state.selectedRole = role;
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
   document.querySelector(`.role-btn[data-role="${role}"]`)?.classList.add('selected');
-
-  // Persist role to user record — await with .select() to confirm save
-  if (state.currentUser) {
-    const { data, error } = await getClient()
-      .from('library_users')
-      .update({ role })
-      .eq('id', state.currentUser.id)
-      .select()
-      .single();
-    if (error) {
-      console.error('Role update error:', error);
+  setTimeout(() => {
+    if (role === 'Student') {
+      buildProgramGrid();
+      showScreen('program');
     } else {
-      state.currentUser.role = data.role; // confirm from DB response
-      console.log('Role saved to DB:', data.role);
+      // Employee — save role immediately (no program)
+      if (state.currentUser) {
+        DB.updateUser(state.currentUser.id, { saved_role: role, saved_program: null })
+          .then(updated => { if (updated) state.currentUser = updated; });
+      }
+      document.getElementById('purpose-greeting').textContent = `What brings you to the library today?`;
+      showScreen('purpose');
     }
-  }
-
-  if (role === 'Student') {
-    buildProgramGrid();
-    showScreen('program');
-  } else {
-    document.getElementById('purpose-greeting').textContent = `What brings you to the library today?`;
-    showScreen('purpose');
-  }
+  }, 200);
 }
 
 // ══════════════════════════════════════════════════
@@ -936,35 +837,26 @@ function buildProgramGrid() {
   });
 }
 
-async function handleProgramConfirm() {
+function handleProgramConfirm() {
   if (!state.selectedProgram) return;
 
-  const btn = document.getElementById('btn-confirm-program');
-  btn.disabled = true;
-
+  // Derive college from program
   const derivedCollege = CONFIG.programCollegeMap[state.selectedProgram] || state.currentUser?.college;
+
+  // Save role, program, and college to user record
   if (state.currentUser) {
-    const updates = { program: state.selectedProgram };
+    const updates = {
+      saved_role:    state.selectedRole,
+      saved_program: state.selectedProgram,
+    };
     if (derivedCollege && derivedCollege !== state.currentUser.college) {
       updates.college = derivedCollege;
+      state.currentUser.college = derivedCollege;
     }
-    // Persist program (and college) to DB — await with .select() to confirm
-    const { data, error } = await getClient()
-      .from('library_users')
-      .update(updates)
-      .eq('id', state.currentUser.id)
-      .select()
-      .single();
-    if (error) {
-      console.error('Program update error:', error);
-    } else {
-      state.currentUser.program = data.program; // confirm from DB
-      state.currentUser.college = data.college;
-      console.log('Program saved to DB:', data.program, '| College:', data.college);
-    }
+    DB.updateUser(state.currentUser.id, updates)
+      .then(updated => { if (updated) state.currentUser = updated; });
   }
 
-  btn.disabled = false;
   document.getElementById('purpose-greeting').textContent =
     `${state.selectedProgram} — what brings you to the library today?`;
   showScreen('purpose');
@@ -974,27 +866,13 @@ async function handleProgramConfirm() {
 // ── ADMIN FLOW ───────────────────────────────────
 // ══════════════════════════════════════════════════
 
-async function handleAdminLogin() {
-  const email = document.getElementById('admin-email').value.trim().toLowerCase();
+function handleAdminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
   const err = document.getElementById('admin-login-error');
   err.classList.add('hidden');
-
-  const btn = document.getElementById('btn-admin-submit');
-  btn.disabled = true;
-  btn.querySelector('span').textContent = 'Checking…';
-
-  // Check hardcoded admin OR dynamic admins in DB
-  let isAdmin = email === CONFIG.adminEmail.toLowerCase();
-  if (!isAdmin) {
-    const adminUsers = await DB.getAdminEmails();
-    isAdmin = adminUsers.some(u => u.email?.toLowerCase() === email);
+  if (!CONFIG.adminEmails.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
+    return showError(err, 'Unrecognized admin email. Contact the system administrator.');
   }
-
-  btn.disabled = false;
-  btn.querySelector('span').textContent = 'Sign In';
-
-  if (!isAdmin) return showError(err, 'Unrecognized admin email.');
-
   state.adminLoggedIn = true;
   document.getElementById('admin-name-badge').textContent = email.split('@')[0];
   showScreen('dashboard');
@@ -1005,8 +883,6 @@ function handleAdminLogout() {
   state.adminLoggedIn = false;
   document.getElementById('admin-email').value = '';
   showScreen('landing');
-  // Refresh landing stats immediately after logout
-  loadLandingStats();
 }
 
 // ══════════════════════════════════════════════════
@@ -1107,95 +983,32 @@ async function renderOverview() {
   const canvas = document.getElementById('college-chart');
   if (canvas) {
     if (collegeChart) collegeChart.destroy();
-    // Build per-bar gold gradient
-    const ctx2d = canvas.getContext('2d');
-
-    // Elegant gradient per bar: deep crimson-to-gold
-    function makeBarGradient(ctx, chartArea, value, max) {
-      const grad = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-      grad.addColorStop(0,   'rgba(80, 20, 0, 0.85)');
-      grad.addColorStop(0.4, 'rgba(160, 40, 0, 0.9)');
-      grad.addColorStop(0.75,'rgba(201,120,30, 0.95)');
-      grad.addColorStop(1,   'rgba(232,196,100, 1)');
-      return grad;
-    }
-
-    const gradientPlugin = {
-      id: 'gradientBars',
-      beforeDatasetsDraw(chart) {
-        const { ctx, data, chartArea } = chart;
-        if (!chartArea) return;
-        chart.data.datasets[0].backgroundColor = data.datasets[0].data.map(() =>
-          makeBarGradient(ctx, chartArea)
-        );
-        chart.data.datasets[0].borderColor = data.datasets[0].data.map(() =>
-          'rgba(201,168,76,0.7)'
-        );
-      }
-    };
-
-    collegeChart = new Chart(ctx2d, {
+    collegeChart = new Chart(canvas.getContext('2d'), {
       type: 'bar',
-      plugins: [gradientPlugin],
       data: {
         labels: sorted.map(([k]) => k),
         datasets: [{
           label: 'Visits',
           data: sorted.map(([,v]) => v),
-          backgroundColor: 'rgba(201,168,76,0.6)', // placeholder, overridden by plugin
-          borderColor: 'rgba(201,168,76,0.6)',
-          borderWidth: 1,
-          borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
-          borderSkipped: 'bottom',
-          maxBarThickness: 48,
-          minBarLength: 4,
+          backgroundColor: sorted.map((_,i) => i%2===0 ? 'rgba(192,0,26,0.75)' : 'rgba(0,100,0,0.75)'),
+          borderColor:      sorted.map((_,i) => i%2===0 ? 'rgba(232,0,31,1)'   : 'rgba(0,160,0,1)'),
+          borderWidth: 1, borderRadius: 6, borderSkipped: false,
+          maxBarThickness: 52, minBarLength: 4,
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        animation: {
-          duration: 900,
-          easing: 'easeOutQuart',
-        },
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(17,14,8,0.95)',
-            borderColor: 'rgba(201,168,76,0.4)',
-            borderWidth: 1,
-            titleColor: '#e8c96a',
-            titleFont: { family: 'Cinzel, serif', size: 11, weight: '700' },
-            bodyColor: '#b89e72',
-            bodyFont: { family: 'EB Garamond, serif', size: 13 },
-            padding: 12,
-            cornerRadius: 3,
-            callbacks: {
-              title: items => items[0].label,
-              label: ctx => `  ${ctx.parsed.y} visit${ctx.parsed.y!==1?'s':''}`,
-            }
+            backgroundColor: '#1a1414', borderColor: 'rgba(192,0,26,0.4)', borderWidth: 1,
+            titleColor: '#f0eded', bodyColor: '#8a7e7e',
+            callbacks: { label: ctx => ` ${ctx.parsed.y} visit${ctx.parsed.y!==1?'s':''}` }
           }
         },
         scales: {
-          x: {
-            grid: { color: 'rgba(201,168,76,0.04)', lineWidth: 1 },
-            border: { color: 'rgba(201,168,76,0.2)' },
-            ticks: {
-              color: '#b89e72',
-              font: { family: 'Cinzel, serif', size: 10, weight: '600' },
-              maxRotation: 45,
-            }
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(201,168,76,0.06)', lineWidth: 1 },
-            border: { color: 'rgba(201,168,76,0.2)', dash: [4, 4] },
-            ticks: {
-              color: '#b89e72',
-              font: { family: 'Cinzel, serif', size: 10 },
-              stepSize: 1, precision: 0,
-              callback: val => val === 0 ? '' : val,
-            }
-          }
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a7e7e', font: { family: 'DM Sans', size: 11 } } },
+          y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a7e7e', font: { family: 'DM Sans', size: 11 }, stepSize: 1, precision: 0 } }
         }
       }
     });
@@ -1251,25 +1064,27 @@ async function renderUsers(query) {
   if (!users.length) { empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
   users.forEach(u => {
-    const count = visitCount[u.id] || 0;
-    const last  = lastVisit[u.id] ? formatDate(new Date(lastVisit[u.id])) : '—';
-    const isAdmin = u.is_admin ? '<span class="role-pill admin-pill">Admin</span>' : '';
+    const count    = visitCount[u.id] || 0;
+    const last     = lastVisit[u.id] ? formatDate(new Date(lastVisit[u.id])) : '—';
+    const isAdmin  = CONFIG.adminEmails.map(e => e.toLowerCase()).includes(u.email?.toLowerCase());
     tbody.insertAdjacentHTML('beforeend', `
       <tr>
-        <td>${esc(u.name)} ${isAdmin}</td>
-        <td class="visit-email-cell">${esc(u.email||u.rfid||'—')}</td>
+        <td>
+          ${esc(u.name)}
+          ${isAdmin ? '<span class="admin-tag"><i class="fas fa-shield-halved"></i> Admin</span>' : ''}
+        </td>
+        <td style="color:var(--text-muted);font-size:12px">${esc(u.email||u.rfid||'—')}</td>
         <td>${esc(u.college||'—')}</td>
+        <td>
+          ${u.saved_role
+            ? `<span class="role-pill ${u.saved_role.toLowerCase()}">${esc(u.saved_role)}</span>`
+            : '<span style="color:var(--text-dim)">—</span>'}
+        </td>
         <td style="font-family:var(--font-head);font-weight:700">${count}</td>
-        <td class="visit-time-cell">${last}</td>
+        <td style="color:var(--text-muted);font-size:12px">${last}</td>
         <td><span class="status-pill ${u.blocked?'blocked':'active'}">${u.blocked?'Blocked':'Active'}</span></td>
-        <td class="user-action-cell">
-          <button class="action-btn edit-user" data-id="${u.id}"
-            data-name="${esc(u.name)}" data-email="${esc(u.email||'')}"
-            data-rfid="${esc(u.rfid||'')}" data-college="${esc(u.college||'')}"
-            data-role="${esc(u.role||'')}" data-program="${esc(u.program||'')}"
-            data-is-admin="${u.is_admin?'1':'0'}">
-            ✎ Edit
-          </button>
+        <td class="actions-cell">
+          <button class="action-btn edit" data-id="${u.id}"><i class="fas fa-pen"></i></button>
           ${u.blocked
             ? `<button class="action-btn unblock" data-id="${u.id}">Unblock</button>`
             : `<button class="action-btn block"   data-id="${u.id}">Block</button>`}
@@ -1298,7 +1113,7 @@ async function renderBlocked(query) {
     tbody.insertAdjacentHTML('beforeend', `
       <tr>
         <td>${esc(u.name)}</td>
-        <td class="visit-email-cell">${esc(u.email||u.rfid||'—')}</td>
+        <td style="color:var(--text-muted);font-size:12px">${esc(u.email||u.rfid||'—')}</td>
         <td>${esc(u.college)}</td>
         <td style="font-family:var(--font-head);font-weight:700">${visitCount[u.id]||0}</td>
         <td><span class="status-pill blocked">Blocked</span></td>
@@ -1322,44 +1137,26 @@ function visitRow(v) {
   return `
     <tr>
       <td>${esc(u?.name||'—')}</td>
-      <td class="visit-email-cell">${esc(u?.email||u?.rfid||'—')}</td>
+      <td style="color:var(--text-muted);font-size:12px">${esc(u?.email||u?.rfid||'—')}</td>
       <td>${esc(getVisitCollege(v))}</td>
       <td>${v.role ? `<span class="role-pill ${v.role.toLowerCase()}">${esc(v.role)}</span>` : '—'}</td>
       <td>${esc(v.purpose)}</td>
-      <td class="visit-program-cell">${esc(v.program||'—')}</td>
-      <td class="visit-time-cell">${formatDate(d)} ${formatTime(d)}</td>
+      <td style="color:var(--text-muted);font-size:12px">${esc(v.program||'—')}</td>
+      <td style="color:var(--text-muted);font-size:12px">${formatDate(d)} ${formatTime(d)}</td>
       <td><span class="status-pill ${u?.blocked?'blocked':'active'}">${u?.blocked?'Blocked':'Active'}</span></td>
     </tr>`;
 }
 
 // ══════════════════════════════════════════════════
-
-document.addEventListener('DOMContentLoaded', function() {
-
 // ── BLOCK / UNBLOCK ──────────────────────────────
 // ══════════════════════════════════════════════════
 
 document.addEventListener('click', e => {
   const blockBtn   = e.target.closest('.action-btn.block');
   const unblockBtn = e.target.closest('.action-btn.unblock');
-  const editBtn    = e.target.closest('.action-btn.edit-user');
-
   if (blockBtn)   { state.pendingBlockId   = blockBtn.dataset.id;   document.getElementById('modal-block').classList.remove('hidden'); }
   if (unblockBtn) { state.pendingUnblockId = unblockBtn.dataset.id; document.getElementById('modal-unblock').classList.remove('hidden'); }
-  if (editBtn)    { openEditUserModal(editBtn.dataset); }
 });
-
-function openEditUserModal(data) {
-  state.editingUserId = data.id;
-  document.getElementById('edit-user-name').value    = data.name    || '';
-  document.getElementById('edit-user-email').value   = data.email   || '';
-  document.getElementById('edit-user-rfid').value    = data.rfid    || '';
-  document.getElementById('edit-user-college').value = data.college || '';
-  document.getElementById('edit-user-role').value    = data.role    || '';
-  document.getElementById('edit-user-program').value = data.program || '';
-  document.getElementById('edit-user-is-admin').checked = data.isAdmin === '1';
-  document.getElementById('modal-edit-user').classList.remove('hidden');
-}
 
 document.getElementById('modal-confirm-block').addEventListener('click', async () => {
   if (state.pendingBlockId) {
@@ -1389,56 +1186,90 @@ document.getElementById('modal-unblock-cancel').addEventListener('click', () => 
   state.pendingUnblockId = null;
   document.getElementById('modal-unblock').classList.add('hidden');
 });
-
-// ── Edit User Modal ──
-document.getElementById('modal-edit-cancel').addEventListener('click', () => {
-  state.editingUserId = null;
-  document.getElementById('modal-edit-user').classList.add('hidden');
-});
-
-document.getElementById('modal-edit-save').addEventListener('click', async () => {
-  if (!state.editingUserId) return;
-
-  const name     = document.getElementById('edit-user-name').value.trim();
-  const email    = document.getElementById('edit-user-email').value.trim().toLowerCase();
-  const rfid     = document.getElementById('edit-user-rfid').value.trim();
-  const college  = document.getElementById('edit-user-college').value.trim();
-  const role     = document.getElementById('edit-user-role').value;
-  const program  = document.getElementById('edit-user-program').value.trim();
-  const isAdmin  = document.getElementById('edit-user-is-admin').checked;
-
-  if (!name) return showToast('Name cannot be empty.', 'error');
-
-  const btn = document.getElementById('modal-edit-save');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
-
-  const updates = { name };
-  if (email)   updates.email   = email;
-  if (rfid)    updates.rfid    = rfid;
-  if (college) updates.college = college;
-  if (role)    updates.role    = role;
-  if (program) updates.program = program;
-  updates.is_admin = isAdmin;
-
-  const result = await DB.updateUser(state.editingUserId, updates);
-
-  btn.disabled = false;
-  btn.textContent = 'Save Changes';
-
-  if (result) {
-    showToast(`${name} updated successfully.`, 'success');
-    document.getElementById('modal-edit-user').classList.add('hidden');
-    state.editingUserId = null;
-    state.allVisits = []; // invalidate cache
-    renderUsers(getVisitorFilters().query);
-  } else {
-    showToast('Update failed. Please try again.', 'error');
-  }
-});
 document.getElementById('modal-blocked-ok').addEventListener('click', () => {
   document.getElementById('modal-blocked').classList.add('hidden');
   resetToLogin();
+});
+
+
+// ══════════════════════════════════════════════════
+// ── EDIT USER MODAL ──────────────────────────────
+// ══════════════════════════════════════════════════
+
+document.addEventListener('click', e => {
+  const editBtn = e.target.closest('.action-btn.edit');
+  if (!editBtn) return;
+  openEditModal(editBtn.dataset.id);
+});
+
+async function openEditModal(userId) {
+  const users = await DB.getUsers();
+  const u = users.find(u => u.id === userId);
+  if (!u) return;
+
+  document.getElementById('edit-user-id').value  = u.id;
+  document.getElementById('edit-name').value      = u.name || '';
+  document.getElementById('edit-email').value     = u.email || '';
+  document.getElementById('edit-college').value   = u.college || '';
+  document.getElementById('edit-role').value      = u.saved_role || '';
+  document.getElementById('edit-program').value   = u.saved_program || '';
+  document.getElementById('edit-is-admin').checked =
+    CONFIG.adminEmails.map(e => e.toLowerCase()).includes(u.email?.toLowerCase());
+
+  document.getElementById('modal-edit-user').classList.remove('hidden');
+}
+
+document.getElementById('modal-edit-cancel')?.addEventListener('click', () => {
+  document.getElementById('modal-edit-user').classList.add('hidden');
+});
+
+document.getElementById('modal-edit-save')?.addEventListener('click', async () => {
+  const userId     = document.getElementById('edit-user-id').value;
+  const name       = document.getElementById('edit-name').value.trim();
+  const email      = document.getElementById('edit-email').value.trim();
+  const college    = document.getElementById('edit-college').value;
+  const savedRole  = document.getElementById('edit-role').value;
+  const savedProg  = document.getElementById('edit-program').value.trim();
+  const makeAdmin  = document.getElementById('edit-is-admin').checked;
+
+  if (!name) { showToast('Name is required.', 'error'); return; }
+
+  const btn = document.getElementById('modal-edit-save');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'Saving…';
+
+  const updates = {
+    name,
+    email:         email || null,
+    college:       college || null,
+    saved_role:    savedRole || null,
+    saved_program: savedProg || null,
+  };
+
+  const updated = await DB.updateUser(userId, updates);
+
+  // Handle admin toggle
+  if (email) {
+    const emailLower = email.toLowerCase();
+    const alreadyAdmin = CONFIG.adminEmails.map(e => e.toLowerCase()).includes(emailLower);
+    if (makeAdmin && !alreadyAdmin) {
+      CONFIG.adminEmails.push(email);
+    } else if (!makeAdmin && alreadyAdmin) {
+      CONFIG.adminEmails = CONFIG.adminEmails.filter(e => e.toLowerCase() !== emailLower);
+    }
+  }
+
+  btn.disabled = false;
+  btn.querySelector('span').textContent = 'Save Changes';
+  document.getElementById('modal-edit-user').classList.add('hidden');
+
+  if (updated) {
+    state.allVisits = []; // invalidate cache
+    renderView(state.currentView);
+    showToast(`${name}'s profile updated.`, 'success');
+  } else {
+    showToast('Failed to save changes.', 'error');
+  }
 });
 
 // ══════════════════════════════════════════════════
@@ -1521,8 +1352,6 @@ document.getElementById('btn-welcome-done').addEventListener('click', () => {
 document.getElementById('btn-admin-submit').addEventListener('click', handleAdminLogin);
 document.getElementById('admin-email').addEventListener('keydown', e => { if (e.key==='Enter') handleAdminLogin(); });
 document.getElementById('btn-back-to-visitor').addEventListener('click', () => showScreen('login'));
-// ← Admin Login link inside visitor login card
-document.getElementById('btn-admin-login')?.addEventListener('click', () => showScreen('admin-login'));
 document.getElementById('btn-admin-logout').addEventListener('click', handleAdminLogout);
 
 // Sidebar nav
@@ -1591,34 +1420,6 @@ document.getElementById('btn-reset-filter')?.addEventListener('click', () => {
 document.getElementById('btn-google-visitor')?.addEventListener('click', () => signInWithGoogle('visitor'));
 document.getElementById('btn-google-admin')?.addEventListener('click',   () => signInWithGoogle('admin'));
 
-
-// ══════════════════════════════════════════════════
-// ── AUTO-REFRESH (every 5 seconds) ───────────────
-// ══════════════════════════════════════════════════
-
-let autoRefreshInterval = null;
-
-function startAutoRefresh() {
-  stopAutoRefresh(); // clear any existing
-  autoRefreshInterval = setInterval(async () => {
-    // Only refresh if on the landing screen or admin dashboard
-    if (state.currentScreen === 'landing') {
-      await loadLandingStats();
-    } else if (state.currentScreen === 'dashboard') {
-      // Invalidate cache so fresh data is fetched
-      state.allVisits = [];
-      await renderView(state.currentView);
-    }
-  }, 5000);
-}
-
-function stopAutoRefresh() {
-  if (autoRefreshInterval) {
-    clearInterval(autoRefreshInterval);
-    autoRefreshInterval = null;
-  }
-}
-
 // ══════════════════════════════════════════════════
 // ── INIT ─────────────────────────────────────────
 // ══════════════════════════════════════════════════
@@ -1626,7 +1427,6 @@ function stopAutoRefresh() {
 startClock();
 loadLandingStats();
 initQuotes();
-startAutoRefresh();
 
 // Check if returning from Google OAuth redirect
 handleAuthCallback().then(wasCallback => {
@@ -1634,5 +1434,3 @@ handleAuthCallback().then(wasCallback => {
     showScreen('landing');
   }
 });
-
-}); // end DOMContentLoaded
